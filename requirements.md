@@ -1,6 +1,6 @@
 # Small-Business Cloud Identity and Endpoint Requirements
 
-**Document status:** Draft v0.2  
+**Document status:** Draft v0.3
 **Environment:** Lightweight small-business corporate network  
 **Scope:** 6–10 Windows PCs, currently joined to on-premises Active Directory  
 **Primary SaaS platform:** Google Workspace  
@@ -70,11 +70,11 @@ This is a security requirement, not an optional modernization preference.
 | OBJ‑06 | Avoid unnecessary enterprise-scale complexity, duplicated platforms, and overlapping licenses. | Should |
 | OBJ‑07 | Provide a controlled, testable, and reversible migration with minimal disruption. | Must |
 | OBJ‑08 | Establish repeatable operations for onboarding, offboarding, device replacement, patching, support, backup, and recovery. | Must |
-| OBJ‑09 | Make user access, business data, and standard endpoint configuration portable enough that work can resume from a replacement device or approved location without dependency on the office domain controller. | Should |
+| OBJ‑09 | Optionally allow approved users to resume work from an approved secondary device or external location without dependency on the office domain controller. | Could |
 | OBJ‑10 | Keep the target environment lightweight, stable, low-cost, and maintainable without a full-time specialist. | Must |
 | OBJ‑11 | Prefer supported managed services and standard configuration over custom servers, scripts, or bespoke integration. | Should |
 | OBJ‑12 | Preserve an exit path by maintaining data export, configuration documentation, and vendor-independent ownership of domains and identities. | Must |
-| OBJ‑13 | Treat mobility as an optional ideal state: enable secure work from approved locations when it can be delivered without materially undermining simplicity, stability, maintainability, or cost control. | Should |
+| OBJ‑13 | Treat remote work and user/device portability as optional ideal-state capabilities, enabled only when their business value justifies the incremental cost and administration. | Could |
 
 ## 5. Scope
 
@@ -89,8 +89,8 @@ This is a security requirement, not an optional modernization preference.
 - SaaS and communication-tool access
 - User profiles, local files, shared files, browser data, and required application settings
 - Endpoint protection, disk encryption, patching, compliance, and inventory
-- Optional secure mobility for approved users, devices, and locations
-- Portability of user access, business data, configuration, and recovery procedures
+- Optional remote work and user/device portability for approved users, devices, and locations
+- Mandatory recoverability of business data, configuration, administrative control, and essential user operations
 - DNS, DHCP, file, print, certificate, VPN, RADIUS, script, scheduled-task, and service-account dependencies currently hosted by or dependent on the AD server
 - Backup, recovery, monitoring, documentation, cutover, rollback, and AD decommissioning
 
@@ -119,11 +119,13 @@ This is a security requirement, not an optional modernization preference.
 | BUS‑09 | User training must cover the new sign-in process, MFA, password or passkey recovery, file access, and support escalation. | Must |
 | BUS‑10 | The solution must not require users to understand or administer infrastructure components. | Must |
 | BUS‑11 | Loss or replacement of one office PC must not make a user's business data or essential applications unavailable beyond the approved recovery interval. | Must |
-| BUS‑12 | Where mobility is approved, a user should be able to perform normal SaaS-based work from an approved external location without first connecting to the office LAN. | Should |
+| BUS‑12 | Where remote work is approved, a user may be enabled to perform normal SaaS-based work from an approved external location without first connecting to the office LAN. | Could |
 
 ## 7. Target-state qualities, portability, and mobility requirements
 
-Mobility is an optional or ideal-state capability, not permission for uncontrolled access from any personal device. If enabled, it must use approved identities, MFA, access policies, and endpoint or browser controls. Portability is broader and remains important even when users normally work in the office: the business must be able to replace a PC, change support providers, recover administrative control, and export its data without reconstructing the environment from undocumented knowledge.
+Remote work and user/device portability are optional ideal-state capabilities, not baseline requirements and not permission for uncontrolled access from personal devices. The business may defer them without failing solution acceptance. If either capability is selected, however, its conditional security requirements become mandatory.
+
+Business continuity is not optional. The ability to replace a failed PC, recover corporate data, retain company control of domains and tenants, restore administrative access, and transfer support providers is classified as recoverability and ownership rather than remote-work portability.
 
 The design priority is: mandatory business and security needs first; then stability and recoverability; then simplicity and low operating cost; then optional mobility enhancements. Portability and mobility must not introduce servers, virtual-desktop infrastructure, duplicate management platforms, premium licenses, or recurring specialist effort unless the resulting business benefit is documented and proportionate to a 6–10 PC environment.
 
@@ -140,7 +142,7 @@ The design priority is: mandatory business and security needs first; then stabil
 | NFR‑07 | The business must not need a full-time cloud, Windows, or virtual-desktop specialist to operate the target environment. | Must |
 | NFR‑08 | Monitoring must be exception-based: administrators should receive actionable alerts rather than manually inspect every system each day. | Should |
 | NFR‑09 | Product features that add continuous operational burden without satisfying a mandatory requirement should not be deployed. | Should |
-| NFR‑10 | Optional portability or mobility features should reuse the core identity, endpoint, security, and SaaS controls rather than create a separate remote-access operating model. | Should |
+| NFR‑10 | If selected, optional remote-work or portability features should reuse the core identity, endpoint, security, and SaaS controls rather than create a separate operating model. | Conditional Must |
 
 ### 7.2 Cost control
 
@@ -153,7 +155,7 @@ The design priority is: mandatory business and security needs first; then stabil
 | CST‑05 | Solution selection must compare at least three-year total cost of ownership, including implementation, subscriptions, cloud consumption, hardware replacement, support, and administration. | Must |
 | CST‑06 | Reserved capacity, long-term commitments, or premium service tiers should be purchased only after a pilot confirms sustained need. | Should |
 | CST‑07 | Costs must be reviewable per user, per device, and per shared infrastructure component. | Should |
-| CST‑08 | The incremental licensing, infrastructure, support, and administration cost of optional mobility must be separately identified and approved before enablement. | Must |
+| CST‑08 | The incremental licensing, infrastructure, support, and administration cost of optional remote work or portability must be separately identified and approved before enablement. | Conditional Must |
 
 ### 7.3 Stability and service continuity
 
@@ -177,12 +179,12 @@ The design priority is: mandatory business and security needs first; then stabil
 | MOB‑03 | Approved remote work must not require direct inbound RDP, SMB, LDAP, or administrative access to the office network. | Conditional Must |
 | MOB‑04 | The organization must define whether mobility is limited to managed corporate devices or includes BYOD. BYOD access must be restricted by documented browser, application, data-download, and session controls. | Conditional Must |
 | MOB‑05 | Lost or stolen mobile endpoints must be blockable immediately; corporate sessions and tokens must be revocable. | Conditional Must |
-| MOB‑06 | Users should be able to move between an assigned PC and a replacement or approved secondary device without manual reconstruction of business data and core SaaS access. | Should |
+| MOB‑06 | Users may be enabled to move between an assigned PC and an approved secondary device without manual reconstruction of business data and core SaaS access. | Could |
 | MOB‑07 | Offline access should be limited to specifically approved data and applications, with encryption and synchronization behavior documented. | Could |
 | MOB‑08 | Remote performance must be tested for videoconferencing, file synchronization, browser applications, and any virtual-desktop traffic before mobility is approved. | Conditional Must |
-| MOB‑09 | Mobility should use direct, policy-controlled access to cloud SaaS from managed endpoints where feasible; traffic should not be routed through the office or a hosted desktop without a demonstrated application, security, or data-control requirement. | Should |
+| MOB‑09 | If mobility is enabled, it must use direct, policy-controlled access to cloud SaaS from managed endpoints where feasible; traffic must not be routed through the office or a hosted desktop without a demonstrated application, security, or data-control requirement. | Conditional Must |
 
-### 7.5 Data and configuration portability
+### 7.5 Data ownership, recoverability, and provider portability
 
 | ID       | Requirement | Priority |
 |----------|---|---|
@@ -191,9 +193,9 @@ The design priority is: mandatory business and security needs first; then stabil
 | PRT‑03 | Identity, group, device, application, policy, license, and administrative-role inventories must be exportable or reproducible from current documentation. | Must |
 | PRT‑04 | Standard endpoint settings and application deployment must be reproducible on replacement hardware without relying on the original PC. | Must |
 | PRT‑05 | The organization must maintain a documented process to transfer support responsibility to another qualified administrator or service provider. | Must |
-| PRT‑06 | The design should minimize proprietary dependencies that provide no material business or security benefit. | Should |
-| PRT‑07 | A vendor or product exit plan must identify how identities, data, DNS, applications, backups, and administrative access would be recovered or migrated. | Should |
-| PRT‑08 | Portability must not weaken security by copying unrestricted corporate data to unmanaged devices or personal accounts. | Must |
+| PRT‑06 | The design could minimize proprietary dependencies that provide no material business or security benefit. | Could |
+| PRT‑07 | A vendor or product exit plan could identify how identities, data, DNS, applications, backups, and administrative access would be recovered or migrated. | Could |
+| PRT‑08 | If user/device portability is enabled, it must not weaken security by copying unrestricted corporate data to unmanaged devices or personal accounts. | Conditional Must |
 
 ## 8. Identity and access requirements
 
@@ -294,7 +296,7 @@ The design priority is: mandatory business and security needs first; then stabil
 | NET‑07 | Internet bandwidth, latency, stability, and data caps must support normal concurrent use of Google Workspace, Office, communications, backup, and the selected desktop architecture. | Must |
 | NET‑08 | A secondary Internet service or cellular failover should be provided if loss of cloud access would stop business operations. | Should |
 | NET‑09 | Network equipment configuration must be backed up, and administrative credentials must be held in the approved password-management system. | Must |
-| NET‑10 | If remote work is required, access must use the selected cloud service or an approved VPN/zero-trust service rather than exposing office PCs directly. | Must |
+| NET‑10 | If remote work is enabled, access must use the selected cloud service or an approved VPN/zero-trust service rather than exposing office PCs directly. | Conditional Must |
 
 ## 14. Security and compliance requirements
 
@@ -405,12 +407,33 @@ The selected solution is accepted only when the following measurable outcomes ar
 19. If mobility is enabled, a representative remote-access test passes identity, MFA, access-policy, SaaS, communications, performance, token-revocation, and lost-device scenarios.
 20. Any optional mobility component has a documented business benefit, incremental cost, support owner, and removal path, and does not create an unjustified parallel management platform.
 
-## 20. Open decisions
+## 20. Candidate optional requirements for reference
+
+The following items are not part of the mandatory baseline. Each may be promoted to `Should`, `Conditional Must`, or `Must` only after the business confirms a need, owner, budget, and acceptance test.
+
+| ID       | Optional capability | When it is justified | Default priority |
+|----------|---|---|---|
+| OPT‑01 | Secondary Internet connection or cellular failover | The business cannot tolerate an office-wide outage for the expected ISP restoration period. | Could |
+| OPT‑02 | Managed remote work on corporate devices | Staff must work regularly from home, client sites, or while travelling. | Could |
+| OPT‑03 | Controlled BYOD access | Corporate devices cannot reasonably be issued and browser/session restrictions can protect company data. | Could |
+| OPT‑04 | Cloud desktop or published applications | A legacy Windows application, sensitive-data boundary, contractor use case, or standardized remote desktop justifies the added cost and administration. | Could |
+| OPT‑05 | Dedicated SaaS backup | Native retention and recovery functions do not satisfy the confirmed recovery-point, recovery-time, legal-retention, or ransomware requirements. | Could |
+| OPT‑06 | Passwordless authentication | Supported devices and applications permit passkeys or security keys and the recovery process is documented. | Could |
+| OPT‑07 | Self-service password or account recovery | It materially reduces support effort without weakening identity verification. | Could |
+| OPT‑08 | Automated application deployment and patching | Manual maintenance creates measurable delay, inconsistency, or security exposure across the PC fleet. | Could |
+| OPT‑09 | Centralized remote-support tooling | External support is frequent enough to justify a managed, logged support channel. | Could |
+| OPT‑10 | Formal data-retention and eDiscovery controls | Legal, contractual, insurance, or regulatory obligations require them. | Could |
+| OPT‑11 | Guest or contractor identities | Non-employees need time-limited access to specific data or applications. | Could |
+| OPT‑12 | Enhanced monitoring and security operations service | The risk profile or cyber-insurance conditions justify continuous monitoring beyond standard platform alerts. | Could |
+
+Adding every option would be poor design. For this environment, an option should be rejected when it duplicates an existing service, lacks a measurable business benefit, or creates disproportionate recurring cost or specialist workload.
+
+## 21. Open decisions
 
 The following decisions are required before converting this draft into an approved requirements baseline:
 
 - Exact number of named users and PCs
-- Required remote-work model
+- Whether remote work is desired or deferred and, if desired, the approved model
 - Whether mobility is required, preferred, or deferred
 - Whether remote access is limited to managed corporate devices or permits controlled BYOD
 - Approved monthly operating-cost ceiling and three-year total-cost target
@@ -428,7 +451,7 @@ The following decisions are required before converting this draft into an approv
 - Data-residency, privacy, cyber-insurance, and legal-retention obligations
 - Internal technical owner and external support arrangement
 
-## 21. References
+## 22. References
 
 - [Microsoft: Windows 10 support ended on October 14, 2025](https://support.microsoft.com/en-us/windows/deployment/updates-lifecycle/windows-10-support-has-ended-on-october-14-2025)
 - [Microsoft: Windows 10 Extended Security Updates for organizations](https://learn.microsoft.com/en-us/windows/whats-new/extended-security-updates)
