@@ -23,6 +23,7 @@ This document does not select a product, prescribe a detailed architecture, or p
 | Priority | Meaning |
 |---|---|
 | **Must** | Mandatory. The solution cannot be accepted if the requirement is not satisfied or formally waived with a documented risk. |
+| **Conditional Must** | Mandatory only when the stated optional capability, such as mobility or BYOD, is enabled. |
 | **Should** | Important. The solution should satisfy the requirement unless cost, complexity, or a documented constraint justifies an alternative. |
 | **Could** | Optional improvement. Implement when it provides sufficient value. |
 
@@ -69,6 +70,11 @@ This is a security requirement, not an optional modernization preference.
 | OBJ-06 | Avoid unnecessary enterprise-scale complexity, duplicated platforms, and overlapping licenses. | Should |
 | OBJ-07 | Provide a controlled, testable, and reversible migration with minimal disruption. | Must |
 | OBJ-08 | Establish repeatable operations for onboarding, offboarding, device replacement, patching, support, backup, and recovery. | Must |
+| OBJ-09 | Make user access, business data, and standard endpoint configuration portable enough that work can resume from a replacement device or approved location without dependency on the office domain controller. | Should |
+| OBJ-10 | Keep the target environment lightweight, stable, low-cost, and maintainable without a full-time specialist. | Must |
+| OBJ-11 | Prefer supported managed services and standard configuration over custom servers, scripts, or bespoke integration. | Should |
+| OBJ-12 | Preserve an exit path by maintaining data export, configuration documentation, and vendor-independent ownership of domains and identities. | Must |
+| OBJ-13 | Treat mobility as an optional ideal state: enable secure work from approved locations when it can be delivered without materially undermining simplicity, stability, maintainability, or cost control. | Should |
 
 ## 5. Scope
 
@@ -83,6 +89,8 @@ This is a security requirement, not an optional modernization preference.
 - SaaS and communication-tool access
 - User profiles, local files, shared files, browser data, and required application settings
 - Endpoint protection, disk encryption, patching, compliance, and inventory
+- Optional secure mobility for approved users, devices, and locations
+- Portability of user access, business data, configuration, and recovery procedures
 - DNS, DHCP, file, print, certificate, VPN, RADIUS, script, scheduled-task, and service-account dependencies currently hosted by or dependent on the AD server
 - Backup, recovery, monitoring, documentation, cutover, rollback, and AD decommissioning
 
@@ -110,8 +118,84 @@ This is a security requirement, not an optional modernization preference.
 | BUS-08 | The target operating model must be supportable remotely by a qualified administrator. | Must |
 | BUS-09 | User training must cover the new sign-in process, MFA, password or passkey recovery, file access, and support escalation. | Must |
 | BUS-10 | The solution must not require users to understand or administer infrastructure components. | Must |
+| BUS-11 | Loss or replacement of one office PC must not make a user's business data or essential applications unavailable beyond the approved recovery interval. | Must |
+| BUS-12 | Where mobility is approved, a user should be able to perform normal SaaS-based work from an approved external location without first connecting to the office LAN. | Should |
 
-## 7. Identity and access requirements
+## 7. Target-state qualities, portability, and mobility requirements
+
+Mobility is an optional or ideal-state capability, not permission for uncontrolled access from any personal device. If enabled, it must use approved identities, MFA, access policies, and endpoint or browser controls. Portability is broader and remains important even when users normally work in the office: the business must be able to replace a PC, change support providers, recover administrative control, and export its data without reconstructing the environment from undocumented knowledge.
+
+The design priority is: mandatory business and security needs first; then stability and recoverability; then simplicity and low operating cost; then optional mobility enhancements. Portability and mobility must not introduce servers, virtual-desktop infrastructure, duplicate management platforms, premium licenses, or recurring specialist effort unless the resulting business benefit is documented and proportionate to a 6–10 PC environment.
+
+### 7.1 Lightweight infrastructure and maintainability
+
+| ID | Requirement | Priority |
+|---|---|---|
+| NFR-01 | The permanent target should contain no customer-managed domain controller or general-purpose infrastructure server unless a confirmed business application requires it. | Should |
+| NFR-02 | The number of identity, endpoint-management, security, backup, and monitoring platforms must be minimized. Each additional platform must address a documented gap. | Must |
+| NFR-03 | The design must favor supported SaaS and managed services over self-hosted servers and custom components. | Must |
+| NFR-04 | Routine administration for up to 10 users and PCs should normally require no more than approximately four hours per month, excluding incidents, projects, and major upgrades. | Should |
+| NFR-05 | Common operations must be executable through documented administrative procedures without custom development. | Must |
+| NFR-06 | Configuration must use standard policies, groups, templates, or repeatable automation rather than undocumented one-off settings on individual PCs. | Must |
+| NFR-07 | The business must not need a full-time cloud, Windows, or virtual-desktop specialist to operate the target environment. | Must |
+| NFR-08 | Monitoring must be exception-based: administrators should receive actionable alerts rather than manually inspect every system each day. | Should |
+| NFR-09 | Product features that add continuous operational burden without satisfying a mandatory requirement should not be deployed. | Should |
+| NFR-10 | Optional portability or mobility features should reuse the core identity, endpoint, security, and SaaS controls rather than create a separate remote-access operating model. | Should |
+
+### 7.2 Cost control
+
+| ID | Requirement | Priority |
+|---|---|---|
+| CST-01 | The selected solution must have an approved monthly operating-cost ceiling covering licenses, cloud resources, backup, endpoint security, and support. | Must |
+| CST-02 | Monthly charges must be predictable for the normal 6–10 user workload. Consumption-based services must have budgets and alerts. | Must |
+| CST-03 | Existing Google Workspace, Microsoft Office, Windows, security, and backup entitlements must be inventoried before new licenses are purchased. | Must |
+| CST-04 | Duplicate email, storage, identity, security, or endpoint-management licenses must be justified by a requirement rather than vendor bundling alone. | Must |
+| CST-05 | Solution selection must compare at least three-year total cost of ownership, including implementation, subscriptions, cloud consumption, hardware replacement, support, and administration. | Must |
+| CST-06 | Reserved capacity, long-term commitments, or premium service tiers should be purchased only after a pilot confirms sustained need. | Should |
+| CST-07 | Costs must be reviewable per user, per device, and per shared infrastructure component. | Should |
+| CST-08 | The incremental licensing, infrastructure, support, and administration cost of optional mobility must be separately identified and approved before enablement. | Must |
+
+### 7.3 Stability and service continuity
+
+| ID | Requirement | Priority |
+|---|---|---|
+| STB-01 | The target must use generally available, vendor-supported services and configurations for production workloads. Preview features must not be production dependencies. | Must |
+| STB-02 | A failure of one endpoint must not cause organization-wide authentication, application, or data loss. | Must |
+| STB-03 | No irreplaceable business data, administrative credential, recovery key, or configuration may exist only on one office PC. | Must |
+| STB-04 | Routine platform and endpoint maintenance must be schedulable and must not require organization-wide downtime. | Should |
+| STB-05 | Changes must be piloted, reversible where practical, and introduced in small batches. | Must |
+| STB-06 | The design must define expected behavior during Internet, SaaS, identity-provider, and endpoint-management outages. | Must |
+| STB-07 | Business-critical cloud dependencies must have documented vendor status pages, support routes, and local escalation procedures. | Should |
+| STB-08 | The solution must avoid a single undocumented administrator, personal account, or privately owned domain as a control point. | Must |
+
+### 7.4 User and device mobility
+
+| ID | Requirement | Priority |
+|---|---|---|
+| MOB-01 | The architecture should permit approved users to access Gmail, Google Drive, Google Docs, communication tools, and other browser-based SaaS from an approved remote location. | Could |
+| MOB-02 | Remote or mobile access must use the same corporate identity, MFA, access policy, logging, and offboarding controls as office access. | Conditional Must |
+| MOB-03 | Approved remote work must not require direct inbound RDP, SMB, LDAP, or administrative access to the office network. | Conditional Must |
+| MOB-04 | The organization must define whether mobility is limited to managed corporate devices or includes BYOD. BYOD access must be restricted by documented browser, application, data-download, and session controls. | Conditional Must |
+| MOB-05 | Lost or stolen mobile endpoints must be blockable immediately; corporate sessions and tokens must be revocable. | Conditional Must |
+| MOB-06 | Users should be able to move between an assigned PC and a replacement or approved secondary device without manual reconstruction of business data and core SaaS access. | Should |
+| MOB-07 | Offline access should be limited to specifically approved data and applications, with encryption and synchronization behavior documented. | Could |
+| MOB-08 | Remote performance must be tested for videoconferencing, file synchronization, browser applications, and any virtual-desktop traffic before mobility is approved. | Conditional Must |
+| MOB-09 | Mobility should use direct, policy-controlled access to cloud SaaS from managed endpoints where feasible; traffic should not be routed through the office or a hosted desktop without a demonstrated application, security, or data-control requirement. | Should |
+
+### 7.5 Data and configuration portability
+
+| ID | Requirement | Priority |
+|---|---|---|
+| PRT-01 | Corporate domains, DNS registrations, tenant ownership, billing accounts, and administrator recovery methods must remain under company control. | Must |
+| PRT-02 | User and shared business data must be exportable in documented, commonly usable formats within the approved recovery or exit period. | Must |
+| PRT-03 | Identity, group, device, application, policy, license, and administrative-role inventories must be exportable or reproducible from current documentation. | Must |
+| PRT-04 | Standard endpoint settings and application deployment must be reproducible on replacement hardware without relying on the original PC. | Must |
+| PRT-05 | The organization must maintain a documented process to transfer support responsibility to another qualified administrator or service provider. | Must |
+| PRT-06 | The design should minimize proprietary dependencies that provide no material business or security benefit. | Should |
+| PRT-07 | A vendor or product exit plan must identify how identities, data, DNS, applications, backups, and administrative access would be recovered or migrated. | Should |
+| PRT-08 | Portability must not weaken security by copying unrestricted corporate data to unmanaged devices or personal accounts. | Must |
+
+## 8. Identity and access requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -131,7 +215,7 @@ This is a security requirement, not an optional modernization preference.
 | IAM-14 | Conditional or context-aware access should block or challenge access from noncompliant devices, high-risk sessions, or unexpected locations where licensing supports it. | Should |
 | IAM-15 | Shared mailboxes, group addresses, delegated Drive content, and service identities must have named owners and must not depend on an employee's personal credentials. | Must |
 
-## 8. Windows endpoint requirements
+## 9. Windows endpoint requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -154,7 +238,7 @@ This is a security requirement, not an optional modernization preference.
 | END-17 | A replacement or rebuilt PC should be ready for normal user work within one business day after hardware availability. | Should |
 | END-18 | Remote support must use an approved authenticated support tool. Direct Internet exposure of RDP is prohibited. | Must |
 
-## 9. Google Workspace and SaaS requirements
+## 10. Google Workspace and SaaS requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -169,7 +253,7 @@ This is a security requirement, not an optional modernization preference.
 | GWS-09 | Google Workspace and critical SaaS audit logs must be available to the designated administrator. | Must |
 | GWS-10 | SaaS availability, support, data export, and account-recovery dependencies must be documented for critical services. | Should |
 
-## 10. Application requirements
+## 11. Application requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -182,7 +266,7 @@ This is a security requirement, not an optional modernization preference.
 | APP-07 | Application installers, configuration instructions, license information, and support contacts must be retained in an administrator-accessible repository. | Must |
 | APP-08 | Unsupported applications must not be carried forward without a documented exception and risk treatment. | Must |
 
-## 11. Data, backup, and recovery requirements
+## 12. Data, backup, and recovery requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -197,7 +281,7 @@ This is a security requirement, not an optional modernization preference.
 | DAT-09 | Sensitive data must be encrypted in transit and at rest using supported service capabilities. | Must |
 | DAT-10 | Canadian data-residency or sector-specific privacy requirements must be confirmed before platform selection; they must not be assumed. | Must |
 
-## 12. Network and office infrastructure requirements
+## 13. Network and office infrastructure requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -212,7 +296,7 @@ This is a security requirement, not an optional modernization preference.
 | NET-09 | Network equipment configuration must be backed up, and administrative credentials must be held in the approved password-management system. | Must |
 | NET-10 | If remote work is required, access must use the selected cloud service or an approved VPN/zero-trust service rather than exposing office PCs directly. | Must |
 
-## 13. Security and compliance requirements
+## 14. Security and compliance requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -227,7 +311,7 @@ This is a security requirement, not an optional modernization preference.
 | SEC-09 | Access, device inventory, external sharing, and administrative roles should be reviewed at least quarterly. | Should |
 | SEC-10 | The environment must not depend on security-by-obscurity, shared passwords, unsupported software, or unmonitored administrator accounts. | Must |
 
-## 14. Operational and support requirements
+## 15. Operational and support requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -242,7 +326,7 @@ This is a security requirement, not an optional modernization preference.
 | OPS-09 | Recurring licensing and cloud consumption must be reviewable and accompanied by cost alerts where applicable. | Must |
 | OPS-10 | The selected design must remain proportionate to a 6–10 PC environment and avoid infrastructure that requires continuous specialist administration unless a specific business requirement justifies it. | Must |
 
-## 15. Discovery requirements before solution approval
+## 16. Discovery requirements before solution approval
 
 The following evidence must be collected before any final architecture, cost, or decommissioning date is approved:
 
@@ -262,7 +346,7 @@ The following evidence must be collected before any final architecture, cost, or
 | DIS-12 | Backup configuration, latest successful jobs, retention, offsite copies, and sample restore result | Must |
 | DIS-13 | Regulatory, contractual, insurance, data-residency, RTO, RPO, and acceptable-downtime requirements | Must |
 
-## 16. Migration requirements
+## 17. Migration requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -277,7 +361,7 @@ The following evidence must be collected before any final architecture, cost, or
 | MIG-09 | The project must include user-facing instructions and heightened support during cutover. | Must |
 | MIG-10 | A stabilization period must be completed before AD DS decommissioning. | Must |
 
-## 17. AD decommissioning gate
+## 18. AD decommissioning gate
 
 The AD DS server must not be demoted, disconnected, or destroyed until every item below is confirmed:
 
@@ -296,7 +380,7 @@ The AD DS server must not be demoted, disconnected, or destroyed until every ite
 | DEC-11 | The rollback window and stabilization period have expired without an unresolved critical defect. | Must |
 | DEC-12 | Final approval has been recorded by the business owner and technical owner. | Must |
 
-## 18. Acceptance criteria
+## 19. Acceptance criteria
 
 The selected solution is accepted only when the following measurable outcomes are met:
 
@@ -314,13 +398,23 @@ The selected solution is accepted only when the following measurable outcomes ar
 12. No unresolved AD DS dependency remains in the discovery and decommissioning register.
 13. The on-premises domain controller can be shut down during a controlled validation period without affecting accepted business functions.
 14. Operations, recovery, licensing, architecture, inventory, and support documentation have been handed over.
+15. A representative user can resume approved core work from a replacement device without retrieving data or configuration from the failed PC.
+16. Company administrators can export current identity, group, device, policy, license, and data inventories using the documented procedures.
+17. The validated recurring cost remains within the approved operating budget and all consumption-based services have working budget alerts.
+18. The final design has no undocumented server, account, credential, device, or administrator that constitutes a single point of organizational control.
+19. If mobility is enabled, a representative remote-access test passes identity, MFA, access-policy, SaaS, communications, performance, token-revocation, and lost-device scenarios.
+20. Any optional mobility component has a documented business benefit, incremental cost, support owner, and removal path, and does not create an unjustified parallel management platform.
 
-## 19. Open decisions
+## 20. Open decisions
 
 The following decisions are required before converting this draft into an approved requirements baseline:
 
 - Exact number of named users and PCs
 - Required remote-work model
+- Whether mobility is required, preferred, or deferred
+- Whether remote access is limited to managed corporate devices or permits controlled BYOD
+- Approved monthly operating-cost ceiling and three-year total-cost target
+- Acceptable routine administration effort for the environment
 - Authoritative cloud identity provider
 - Required level of Windows management and software deployment
 - Windows 11 compatibility and replacement schedule for every PC
@@ -334,7 +428,7 @@ The following decisions are required before converting this draft into an approv
 - Data-residency, privacy, cyber-insurance, and legal-retention obligations
 - Internal technical owner and external support arrangement
 
-## 20. References
+## 21. References
 
 - [Microsoft: Windows 10 support ended on October 14, 2025](https://support.microsoft.com/en-us/windows/deployment/updates-lifecycle/windows-10-support-has-ended-on-october-14-2025)
 - [Microsoft: Windows 10 Extended Security Updates for organizations](https://learn.microsoft.com/en-us/windows/whats-new/extended-security-updates)
@@ -342,4 +436,3 @@ The following decisions are required before converting this draft into an approv
 - [Google: Enhanced desktop security for Windows](https://knowledge.workspace.google.com/admin/devices/overview-enhanced-desktop-security-for-windows)
 - [Google: Device requirements for Google endpoint management](https://knowledge.workspace.google.com/admin/devices/device-requirements-for-google-endpoint-management)
 - [Google: Prepare to install Google Credential Provider for Windows](https://knowledge.workspace.google.com/admin/devices/prepare-to-install-gcpw)
-
