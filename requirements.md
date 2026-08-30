@@ -1,6 +1,6 @@
 # Small-Business Cloud Identity and Endpoint Requirements
 
-**Document status:** Draft v0.1  
+**Document status:** Draft v0.2  
 **Environment:** Lightweight small-business corporate network  
 **Scope:** 6–10 Windows PCs, currently joined to on-premises Active Directory  
 **Primary SaaS platform:** Google Workspace  
