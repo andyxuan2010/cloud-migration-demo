@@ -148,7 +148,7 @@ The following must be answered. Without these answers, cost and effort remain bu
 - What recovery time objective (RTO) and recovery point objective (RPO) are required?
 - Is Canadian data residency, privacy regulation, cyber-insurance control, or legal retention in scope?
 
-## 5. Option 1 — Microsoft Entra ID Join and Microsoft Intune
+## 5. Solution 1 — Microsoft Entra ID Join and Microsoft Intune
 
 ### 5.1 Target architecture
 
@@ -200,7 +200,19 @@ Google Workspace remains the primary email and collaboration platform. Entra ID 
 - Supports repeatable device deployment and replacement through Windows Autopilot for compatible procurement scenarios.
 - Provides a credible path to a single authoritative identity across Windows and Google Workspace.
 
-### 5.5 Limitations and risks
+### 5.5 Reliability and single-point-of-failure review
+
+Solution 1 removes the on-premises domain controller as an organization-wide dependency, but it does not automatically provide redundant office connectivity or eliminate managed-cloud service outages. The design must explicitly address the remaining failure paths:
+
+- Entra ID and Intune are provider-managed control-plane dependencies. Protect against tenant lockout with two separately protected emergency accounts, independent recovery methods, documented escalation, and tested local-device outage behavior.
+- Entra SAML for Google Workspace can become a shared authentication path. Pilot federation, retain a protected direct Google administrative recovery path, and test federation bypass or rollback before enforcing SSO broadly.
+- The single ISP/router/firewall path shown in the logical design is a local single point of failure. Back up its configuration, protect it with a UPS, maintain a rapid-replacement plan, and add dual-WAN or cellular failover only when the approved RTO and business value justify the cost.
+- A failed PC is a per-user failure. Keep business data in company-controlled cloud locations, maintain a repeatable Intune/Autopilot rebuild process, and test replacement-device recovery; provide a spare or loaner when the user RTO requires it.
+- Google Workspace synchronization is not backup. Use independent backup with separate credentials, protected retention, documented exports, and periodic sample restores.
+
+The solution must not be described as fully highly available unless the applicable WAN, power, replacement-equipment, recovery, and failover tests are approved and completed.
+
+### 5.6 Limitations and risks
 
 - GPOs cannot be copied blindly; required settings must be translated to Intune or replaced.
 - Applications requiring LDAP, Kerberos, NTLM, domain computer accounts, or Windows integrated authentication need remediation or a separate legacy service.
@@ -208,7 +220,7 @@ Google Workspace remains the primary email and collaboration platform. Entra ID 
 - Google Workspace and Microsoft cloud identities must be integrated deliberately; matching email addresses alone does not create lifecycle integration.
 - Maintaining both Google Workspace and a Microsoft 365 bundle may create overlapping email, storage, and collaboration licenses.
 
-### 5.6 Budgetary cost and effort
+### 5.7 Budgetary cost and effort
 
 | Item | Budgetary estimate |
 |---|---:|
@@ -385,7 +397,7 @@ Sizing must be tested with actual browser tabs, Google Drive behavior, Office fi
 
 Scoring uses 1 = weak/unfavourable and 5 = strong/favourable for this specific six-user environment.
 
-| Criterion | Option 1: Entra + Intune | Option 2: Google + GCPW | Option 3: AVD |
+| Criterion | Solution 1: Entra + Intune | Option 2: Google + GCPW | Option 3: AVD |
 |---|:---:|:---:|:---:|
 | Windows endpoint management | 5 | 2 | 5 |
 | Alignment with Google Workspace | 4 | 5 | 3 |
@@ -399,13 +411,13 @@ Scoring uses 1 = weak/unfavourable and 5 = strong/favourable for this specific s
 | Operational effort | 4 | 4 | 2 |
 | Overall fit, subject to discovery | **5** | **3** | **3** |
 
-The numbers are decision aids, not measurements. A mandatory requirement overrides the score. For example, if a critical application requires domain Kerberos and cannot be modernized, neither Option 1 nor Option 2 can be approved as written.
+The numbers are decision aids, not measurements. A mandatory requirement overrides the score. For example, if a critical application requires domain Kerberos and cannot be modernized, neither Solution 1 nor Option 2 can be approved as written.
 
 ## 9. Cost summary
 
 | Option | Main monthly costs | One-time implementation estimate |
 |---|---:|---:|
-| 1. Entra ID + Intune | Approximately CAD 260.40 Microsoft reference licensing + CAD 30–100 backup; subtract already-owned entitlements and obtain a reseller quote | CAD 4,000–7,200 |
+| Solution 1: Entra ID + Intune | Approximately CAD 260.40 Microsoft reference licensing + CAD 30–100 backup; subtract already-owned entitlements and obtain a reseller quote | CAD 4,000–7,200 |
 | 2. Google + GCPW | USD 132–158.40 Google Business Plus + CAD 85.20 Office if needed + CAD 0–180 supplemental endpoint tooling + CAD 30–100 backup | CAD 3,500–6,600 |
 | 3. AVD | Approximately CAD 260.40 eligible Microsoft reference licensing + CAD 300–700 Azure + CAD 30–100 backup, while retaining Google Workspace | CAD 6,000–10,800 |
 
@@ -413,11 +425,11 @@ These figures are planning estimates, not quotations. They exclude tax, reseller
 
 ## 10. Recommendation
 
-### 10.1 Preferred option
+### 10.1 Preferred solution
 
-Proceed with **Option 1: Microsoft Entra ID Join and Microsoft Intune**, while retaining Google Workspace for Gmail, Drive, and Docs and integrating it with Entra ID for SSO and lifecycle management.
+Proceed with **Solution 1: Microsoft Entra ID Join and Microsoft Intune**, while retaining Google Workspace for Gmail, Drive, and Docs and integrating it with Entra ID for SSO and lifecycle management.
 
-This option is the strongest fit because the problem includes Windows workstation identity, security, configuration, patching, encryption, and application management—not merely access to Google applications. Intune has the most complete native control plane for those Windows requirements without introducing persistent virtual-desktop infrastructure.
+This solution is the strongest fit because the problem includes Windows workstation identity, security, configuration, patching, encryption, and application management—not merely access to Google applications. Intune has the most complete native control plane for those Windows requirements without introducing persistent virtual-desktop infrastructure.
 
 ### 10.2 Conditional alternatives
 
@@ -478,4 +490,3 @@ The project is complete only when:
 - [Microsoft: FSLogix profile containers for Azure Virtual Desktop](https://learn.microsoft.com/en-us/azure/virtual-desktop/fslogix-profile-containers)
 - [Microsoft: Azure Virtual Desktop autoscale scaling plans](https://learn.microsoft.com/en-us/azure/virtual-desktop/autoscale-create-assign-scaling-plan)
 - [Azure Pricing Calculator](https://azure.microsoft.com/en-ca/pricing/calculator/)
-
