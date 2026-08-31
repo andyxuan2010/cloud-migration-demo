@@ -431,7 +431,7 @@ The comparison is against the updated requirements, where remote work and user/d
 
 The requirements make centrally managed Windows security, encryption, patching, inventory, application deployment, and local-admin control mandatory. Intune maps most directly to those requirements without introducing a new desktop-hosting platform.
 
-### When Option 2 may be selected
+### When Solution 2 may be selected
 
 Select Google Workspace + GCPW only if discovery proves that:
 
@@ -441,7 +441,7 @@ Select Google Workspace + GCPW only if discovery proves that:
 - the business accepts a workgroup-style Windows operating model;
 - the lower cost and simpler Google-centered administration outweigh Intune’s stronger Windows controls.
 
-### When Option 3 may be selected
+### When Solution 3 may be selected
 
 Select AVD only if a documented requirement justifies it, such as:
 

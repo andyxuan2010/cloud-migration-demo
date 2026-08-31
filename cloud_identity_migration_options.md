@@ -234,7 +234,7 @@ The solution must not be described as fully highly available unless the applicab
 | Implementation effort | **32–48 hours** for a clean six-device environment; add remediation time for legacy applications, complex profiles, server roles, or large data volumes. |
 | Indicative one-time services at CAD 125–150/hour | **CAD 4,000–7,200** |
 
-## 6. Option 2 — Google Workspace with GCPW and Windows device management
+## 6. Solution 2 — Google Workspace with GCPW and Windows device management
 
 ### 6.1 Target architecture
 
@@ -304,7 +304,7 @@ The PCs are not joined to a traditional Windows domain. This is a cloud-first, w
 | Implementation effort | **28–44 hours** if no domain-dependent workload remains; add time for third-party endpoint tooling, profile remediation, or application packaging. |
 | Indicative one-time services at CAD 125–150/hour | **CAD 3,500–6,600** |
 
-## 7. Option 3 — Azure Virtual Desktop with office PCs as terminals
+## 7. Solution 3 — Azure Virtual Desktop with office PCs as terminals
 
 ### 7.1 Target architecture
 
@@ -400,7 +400,7 @@ Sizing must be tested with actual browser tabs, Google Drive behavior, Office fi
 
 Scoring uses 1 = weak/unfavourable and 5 = strong/favourable for this specific six-user environment.
 
-| Criterion | Solution 1: Entra + Intune | Option 2: Google + GCPW | Option 3: AVD |
+| Criterion | Solution 1: Entra + Intune | Solution 2: Google + GCPW | Solution 3: AVD |
 |---|:---:|:---:|:---:|
 | Windows endpoint management | 5 | 2 | 5 |
 | Alignment with Google Workspace | 4 | 5 | 3 |
@@ -414,7 +414,7 @@ Scoring uses 1 = weak/unfavourable and 5 = strong/favourable for this specific s
 | Operational effort | 4 | 4 | 2 |
 | Overall fit, subject to discovery | **5** | **3** | **3** |
 
-The numbers are decision aids, not measurements. A mandatory requirement overrides the score. For example, if a critical application requires domain Kerberos and cannot be modernized, neither Solution 1 nor Option 2 can be approved as written.
+The numbers are decision aids, not measurements. A mandatory requirement overrides the score. For example, if a critical application requires domain Kerberos and cannot be modernized, neither Solution 1 nor Solution 2 can be approved as written.
 
 ## 9. Cost summary
 
@@ -425,8 +425,8 @@ The following comparable model assumes six users and six PCs, normal SaaS and Of
 | Solution | Typical deployment cost | Typical operational cost | Typical maintenance cost |
 |---|---:|---:|---:|
 | Solution 1: Entra ID + Intune | **CAD 4,000–7,200** (32–48 hours) | **CAD 380–450/month** gross: Microsoft 365 Business Premium without Copilot, retained Google Workspace Business Plus, and backup. The no-Teams Microsoft SKU lowers this to approximately **CAD 355–425/month**. | **CAD 250–600/month** (2–4 hours) |
-| Option 2: Google Workspace + GCPW | **CAD 3,500–6,600** (28–44 hours) | **CAD 290–540/month** gross: Google Workspace Business Plus, Microsoft Office if needed, supplemental endpoint/RMM tooling, and backup. Flexible Google billing can add approximately **CAD 34/month** for 6 users. | **CAD 375–900/month** (3–6 hours) |
-| Option 3: Azure Virtual Desktop | **CAD 7,250–15,600** (58–104 hours); a basic pilot may be **CAD 6,000–10,800** | **CAD 980–1,850/month** gross for two right-sized hosts, Microsoft and retained Google licensing, and backup. A one-host pilot is approximately **CAD 680–1,150/month** but retains the host single point of failure. | **CAD 750–1,800/month** (6–12 hours) |
+| Solution 2: Google Workspace + GCPW | **CAD 3,500–6,600** (28–44 hours) | **CAD 290–540/month** gross: Google Workspace Business Plus, Microsoft Office if needed, supplemental endpoint/RMM tooling, and backup. Flexible Google billing can add approximately **CAD 34/month** for 6 users. | **CAD 375–900/month** (3–6 hours) |
+| Solution 3: Azure Virtual Desktop | **CAD 7,250–15,600** (58–104 hours); a basic pilot may be **CAD 6,000–10,800** | **CAD 980–1,850/month** gross for two right-sized hosts, Microsoft and retained Google licensing, and backup. A one-host pilot is approximately **CAD 680–1,150/month** but retains the host single point of failure. | **CAD 750–1,800/month** (6–12 hours) |
 
 These are planning estimates, not quotations. Subtract existing entitlements to determine incremental cost. The totals exclude tax, reseller margin, hardware replacement, Internet service, optional dual-WAN/5G or UPS, formal project management, after-hours cutover, regulated-compliance work, large data migration, complex application remediation, and ongoing managed support. Azure consumption must be recalculated for the selected Canadian region, workload schedule, storage tier, and availability design.
 
@@ -440,14 +440,14 @@ This solution is the strongest fit because the problem includes Windows workstat
 
 ### 10.2 Conditional alternatives
 
-Choose **Option 2** only if discovery proves all of the following:
+Choose **Solution 2** only if discovery proves all of the following:
 
 - the PCs require only basic Windows configuration and software management;
 - no application or appliance depends on AD DS protocols or domain membership;
 - Google Workspace provides every required endpoint control, or identified gaps are accepted and funded through another product; and
 - the organization accepts a workgroup-style Windows architecture.
 
-Choose **Option 3** only if centralized desktops provide a documented business benefit that justifies the extra cost and operational burden, such as:
+Choose **Solution 3** only if centralized desktops provide a documented business benefit that justifies the extra cost and operational burden, such as:
 
 - users need the same managed desktop from office and remote locations;
 - local endpoint data must be minimized;

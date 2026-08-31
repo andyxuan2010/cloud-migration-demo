@@ -1,4 +1,4 @@
-# Option 3 — Azure Virtual Desktop (AVD) with Office PCs as Access Terminals
+# Solution 3 — Azure Virtual Desktop (AVD) with Office PCs as Access Terminals
 
 ## Detailed architecture design, analysis, and comparison
 
@@ -530,7 +530,7 @@ For a comparable six-user planning model, use Canadian dollars before tax and an
 
 ### 11.1 Requirement fit
 
-| Requirement dimension | Option 1: Entra ID + Intune | Option 2: Google Workspace + GCPW | Option 3: AVD |
+| Requirement dimension | Solution 1: Entra ID + Intune | Solution 2: Google Workspace + GCPW | Solution 3: AVD |
 |---|---|---|---|
 | Remove AD DS | Strong | Possible with feature-gap validation | Strong for the cloud-only baseline |
 | Retain capable local PCs as workstations | Strong | Strong | PCs become access terminals |
@@ -557,7 +557,7 @@ AVD is third because the requirements prioritize lightweight infrastructure, low
 - greater dependence on office Internet and Azure regional services; and
 - more licenses and operating procedures than are necessary when the existing PCs are capable Windows 11 workstations.
 
-Those trade-offs are worthwhile only when centralized desktops or a terminal model deliver a measurable business benefit. AVD should move ahead of Option 2 only when Windows application control, central data location, or standardized hosted desktops are more important than the Google-first low-cost model. It should not displace Option 1 for a simple AD retirement without such a benefit.
+Those trade-offs are worthwhile only when centralized desktops or a terminal model deliver a measurable business benefit. AVD should move ahead of Solution 2 only when Windows application control, central data location, or standardized hosted desktops are more important than the Google-first low-cost model. It should not displace Solution 1 for a simple AD retirement without such a benefit.
 
 ### 11.3 Decision rule
 
@@ -570,7 +570,7 @@ Select AVD if the pilot proves all of the following:
 5. the resulting centralization materially improves support, data control, application delivery, or mobility; and
 6. the organization can operate the service using a documented generalist or managed-support model.
 
-Otherwise, use Option 1 as the default target and keep Option 2 as the Google-centric alternative.
+Otherwise, use Solution 1 as the default target and keep Solution 2 as the Google-centric alternative.
 
 ## 12. Risks and mitigations
 

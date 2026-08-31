@@ -1,10 +1,10 @@
-# Option 2 — Google Workspace + GCPW + Windows Device Management
+# Solution 2 — Google Workspace + GCPW + Windows Device Management
 
 ## Detailed architecture design, analysis, and comparison
 
 **Design scope:** 6–10 Windows PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.
 
-**Document relationship:** This is the detailed design for Option 2. The authoritative baseline remains [`requirements.md`](requirements.md). Remote work and user/device portability are optional; endpoint security, recovery, data ownership, and AD dependency removal remain mandatory.
+**Document relationship:** This is the detailed design for Solution 2. The authoritative baseline remains [`requirements.md`](requirements.md). Remote work and user/device portability are optional; endpoint security, recovery, data ownership, and AD dependency removal remain mandatory.
 
 ## 1. Executive decision
 
@@ -416,7 +416,7 @@ For a comparable six-user/six-device planning model, use Canadian dollars before
 
 The comparison uses the updated requirements, where remote work and user/device portability are optional.
 
-| Criterion | Option 1: Entra ID + Intune | Option 2: Google + GCPW | Option 3: AVD |
+| Criterion | Solution 1: Entra ID + Intune | Solution 2: Google + GCPW | Solution 3: AVD |
 |---|---|---|---|
 | Authoritative identity | Entra ID | Google Workspace | Entra ID, with hosted desktops |
 | Windows sign-in | Native Entra join | GCPW Google-account sign-in | Hosted-session sign-in |
@@ -432,7 +432,7 @@ The comparison uses the updated requirements, where remote work and user/device 
 | Optional remote work | Supported if enabled | Supported if enabled and controlled | Strong capability but not baseline-required |
 | Suitability for this baseline | **Preferred for Windows control** | **Conditional low-cost alternative** | **Exception only** |
 
-### When Option 2 is appropriate
+### When Solution 2 is appropriate
 
 Select this option only if the pilot proves that:
 
@@ -444,9 +444,9 @@ Select this option only if the pilot proves that:
 - the organization accepts Google Admin as the primary Windows-management console;
 - the lower cost and Google alignment justify the weaker Windows-management depth relative to Intune.
 
-### Why Option 1 remains stronger for risk reduction
+### Why Solution 1 remains stronger for risk reduction
 
-The mandatory baseline requires centrally enforced encryption, security, updates, privilege control, application repeatability, inventory, device actions, and reporting. Intune is designed around those Windows controls. Option 2 may satisfy them, but the organization must prove more through testing and may need additional products.
+The mandatory baseline requires centrally enforced encryption, security, updates, privilege control, application repeatability, inventory, device actions, and reporting. Intune is designed around those Windows controls. Solution 2 may satisfy them, but the organization must prove more through testing and may need additional products.
 
 ### When AVD should be selected instead
 
