@@ -28,7 +28,7 @@ Entra ID is not hosted AD DS. It does not provide traditional domain controllers
 
 ## 2. Architecture diagram
 
-![Microsoft Entra ID and Intune target logical architecture](entra_id_intune_target_architecture.png)
+![Microsoft Entra ID and Intune target logical architecture](images/entra_id_intune_target_architecture.png)
 
 The diagram shows the normal control and data paths in blue. The orange dashed path is optional mobility and is not required for acceptance of the baseline design. It is a logical baseline, not an automatic high-availability topology; the single-point-of-failure review below defines the additional controls required for the approved recovery objectives.
 
