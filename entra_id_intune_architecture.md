@@ -21,6 +21,7 @@ The recommended baseline is:
 - Entra SAML SSO to Google Workspace, with automated provisioning only if tested and required;
 - Google Drive/shared drives for approved business data, with independent backup;
 - the office router/firewall providing DHCP and DNS forwarding after AD DS retirement;
+- cached Entra sign-in enabled through a successful initial online sign-in and verified for every assigned user/device;
 - optional remote work or secondary-device portability enabled only through a separate decision.
 
 Entra ID is not hosted AD DS. It does not provide traditional domain controllers, Group Policy, LDAP, Kerberos, or NTLM in the same way as AD DS. Every remaining dependency on those protocols must be removed, replaced, or explicitly retained before the domain controller is decommissioned.
@@ -37,13 +38,13 @@ The design removes the on-premises domain controller as an organization-wide inf
 
 | Component or path | Failure mode | Baseline assessment | Reliability control or decision |
 |---|---|---|---|
-| Entra ID and Intune control plane | Provider outage or tenant lockout affects new authentication, policy changes, enrollment, and remote actions. | No customer-managed replica is introduced; this is an external managed-service dependency. | Maintain two separately protected emergency accounts, independent recovery methods, documented vendor escalation, and tested local-device outage behavior. Do not make a single administrator or federation rule the only recovery path. |
+| Entra ID and Intune control plane | Provider outage or tenant lockout affects new authentication, policy changes, enrollment, and remote actions. | No customer-managed replica is introduced; this is an external managed-service dependency. Previously signed-in users have limited local continuity through cached Windows credentials, not live Entra validation. | Maintain two separately protected emergency accounts, independent recovery methods, documented vendor escalation, and tested local-device outage behavior. Do not make a single administrator or federation rule the only recovery path. |
 | Entra SAML to Google Workspace | SSO misconfiguration or Entra outage can prevent normal Google sign-in if federation is enforced without a tested fallback. | A potentially shared authentication path. | Pilot SSO, preserve a protected direct Google administrative recovery path, document federation bypass/rollback, and test account recovery before tenant-wide enforcement. |
-| Office ISP and router/firewall | A failed circuit, modem, router/firewall, switch, Wi-Fi component, or power event can interrupt cloud access for the office. | The logical diagram shows one office network path; this is a local single point of failure unless separately engineered. | Back up network configuration, protect the edge equipment with a UPS, retain a rapid-replacement/spare plan, and test failover. Add dual-WAN or cellular backup only when the approved RTO or business-critical cloud access justifies its recurring cost. |
+| Office ISP and router/firewall | A failed circuit, modem, router/firewall, switch, Wi-Fi component, or power event can interrupt cloud access for the office. | The logical diagram shows one office network path; this is a local single point of failure unless separately engineered. | Back up network configuration, protect the edge equipment with a UPS, retain a rapid-replacement/spare plan, and test failover. Keep dual-WAN or 5G/cellular backup optional; add it only when the approved RTO or business-critical cloud access justifies its recurring cost. |
 | Individual Windows PC | A failed endpoint prevents that user from working locally. | A per-user failure, not an organization-wide identity or data failure, provided data is not local-only. | Keep business data in company-controlled cloud locations, maintain repeatable Intune/Autopilot rebuild procedures, and test replacement-device recovery. Provide a spare or loaner when the user RTO requires it. |
 | Google Workspace data and backup | SaaS deletion, account compromise, provider outage, or backup failure can affect business data. | Synchronization alone is not recovery. | Use independent backup with separate administrative credentials, protected retention, documented exports, and periodic sample restores. Verify the backup service itself is monitored and recoverable. |
 
-For this small environment, active-active replacement infrastructure is not required by default. Reliability is improved primarily by removing local AD DS dependencies, keeping data and configuration recoverable, separating emergency administration from normal SSO, and adding WAN/power redundancy only when the approved RTO makes the cost proportionate. The design must not claim full office availability unless the secondary connectivity, UPS, replacement equipment, and failover tests are actually approved and completed.
+For this small environment, active-active replacement infrastructure is not required by default. Reliability is improved primarily by removing local AD DS dependencies, keeping data and configuration recoverable, separating emergency administration from normal SSO, and using cached Entra sign-in for short local outages. Dual-WAN/5G and UPS coverage remain optional resilience enhancements selected by the approved RTO and business case. The design must not claim full office availability unless the secondary connectivity, UPS, replacement equipment, and failover tests are actually approved and completed.
 
 ## 3. Design principles
 
@@ -103,6 +104,7 @@ Each retained PC becomes:
 - administered through controlled elevation rather than permanent local-administrator rights;
 - assigned a managed local administrator account with Windows LAPS or an equivalent password-rotation control;
 - inventoried with owner, serial number, operating-system version, compliance state, and last-contact information.
+- assigned users must complete one successful online Entra sign-in before offline continuity is accepted; cached sign-in is a local fallback and does not provide live cloud authentication.
 
 ### 4.3 Intune management layer
 
@@ -215,6 +217,19 @@ For existing domain PCs, a clean rebuild is often more reliable than trying to c
 
 This flow is not required for the baseline architecture. If enabled, the user connects from an approved managed device or controlled BYOD path using the same corporate identity, MFA, access policy, logging, and offboarding controls. Direct inbound access to the office LAN is prohibited. Remote performance and lost-device/token-revocation scenarios must be tested before approval.
 
+### 5.5 Office Internet-outage continuity flow
+
+Cached Entra sign-in is the baseline local-continuity control for a temporary office Internet outage. It is not a real-time authentication service and does not remove the need for resilient connectivity.
+
+1. While the device has Internet access, the assigned user completes a successful Entra sign-in and the device completes enrollment and policy delivery.
+2. The administrator verifies that the user can sign in after locking and restarting the same device with its network disconnected.
+3. During a short outage, the user can use the cached Windows sign-in and approved local applications or files already available offline.
+4. Gmail, Google Drive online content, SSO, password reset, new-user sign-in, device enrollment, policy changes, and cloud-dependent applications may be unavailable until connectivity returns.
+5. A new user or newly rebuilt device must use the optional dual-WAN/5G path, another approved Internet connection, or a staged replacement process for its first online sign-in; cached sign-in cannot bootstrap a new profile.
+6. When connectivity returns, the device must check in, refresh cloud tokens and policy, and report compliance before the outage is closed.
+
+The pilot must test this flow for each user/device class. The test result must record which local applications and files remain usable, the expected outage duration, and the recovery action for new or rebuilt devices.
+
 ## 6. Security baseline
 
 | Control | Required baseline | Notes |
@@ -228,6 +243,7 @@ This flow is not required for the baseline architecture. If enabled, the user co
 | Privilege | Standard user; controlled elevation; Windows LAPS/equivalent | No permanent local admin by default |
 | Updates | Pilot and standard rings with deadlines and exception reporting | Do not leave Windows 10 unsupported without an approved temporary plan |
 | Data | Shared-drive ownership, independent backup, restore testing | Synchronization alone is not backup |
+| Offline identity continuity | Prior-user cached Entra sign-in, BitLocker, and tested local productivity | First sign-in, new profile, password recovery, cloud apps, and policy refresh require connectivity |
 | Network | Firewall, guest isolation, outbound-only cloud access, no Internet RDP, protected configuration | UPS and dual-WAN/cellular failover are added only when the approved RTO requires them |
 | Logging | Entra, Intune, endpoint-security, backup, and firewall logs | Use exception-based review appropriate to the business size |
 
@@ -452,6 +468,8 @@ The design is accepted only when:
 - BitLocker recovery keys are escrowed and the local-admin recovery process works;
 - onboarding, offboarding, device replacement, emergency access, and support procedures are documented and tested;
 - the two emergency accounts and the direct Google recovery or federation-rollback path have passed a controlled recovery test;
+- every assigned user has completed an online Entra sign-in and passed the offline lock/restart continuity test on the assigned device;
+- the documented outage procedure identifies unavailable cloud functions and the recovery path for new users or rebuilt devices;
 - router/firewall configuration backup and rapid replacement procedures are documented; any approved secondary-WAN, UPS, or failover control has passed its test;
 - user and shared data are owned correctly, independently backed up, and sample-restored;
 - all DNS, DHCP, file, print, certificate, VPN, RADIUS, LDAP, Kerberos, NTLM, script, scheduled-task, and service-account dependencies have documented replacements or are proven unused;
@@ -470,6 +488,7 @@ The design is accepted only when:
 - Confirm whether Defender for Business or another endpoint-security product is required.
 - Confirm the independent Google Workspace backup product and retention.
 - Confirm the approved RTO/RPO and whether secondary Internet connectivity, UPS coverage, or spare network equipment is required.
+- Confirm that cached Entra sign-in and the offline local-productivity test are part of the approved continuity procedure, while dual-WAN/5G remains optional.
 - Confirm that the Entra-to-Google SSO fallback and emergency-account recovery tests are scheduled before broad enforcement.
 - Confirm Windows 11 compatibility for every PC and the replacement schedule for failed devices.
 - Confirm which router/firewall will provide DHCP and DNS forwarding.
@@ -482,6 +501,8 @@ The design is accepted only when:
 ## 15. References
 
 - [Microsoft Entra joined devices](https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join)
+- [Microsoft Entra device management FAQ: cached sign-in behavior](https://learn.microsoft.com/en-us/entra/identity/devices/faq)
+- [Microsoft Entra primary refresh token troubleshooting](https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-primary-refresh-token)
 - [Microsoft Intune Windows enrollment guide](https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide)
 - [Windows Autopilot registration overview](https://learn.microsoft.com/en-us/autopilot/registration-overview)
 - [Windows Autopilot for existing devices](https://learn.microsoft.com/en-us/autopilot/existing-devices)

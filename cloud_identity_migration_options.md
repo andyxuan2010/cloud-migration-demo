@@ -177,6 +177,7 @@ Google Workspace remains the primary email and collaboration platform. Entra ID 
 - Google Workspace SAML SSO and, if selected, automatic provisioning integration
 - Cloud backup for Google Workspace and any other required business data
 - Firewall/router-hosted DHCP and non-AD DNS design if currently provided by Windows Server
+- Cached Entra sign-in tested for every assigned user/device after a successful initial online sign-in
 
 ### 5.3 Implementation sequence
 
@@ -186,16 +187,18 @@ Google Workspace remains the primary email and collaboration platform. Entra ID 
 4. Configure Intune enrollment, device restrictions, compliance, BitLocker, Defender, Windows Update, local-admin controls, and application deployment.
 5. Configure Google Workspace SSO/provisioning in a test group without changing all production users.
 6. Build and validate one pilot PC, including user-profile and data migration.
-7. Migrate remaining PCs one at a time, keeping the domain controller available for rollback.
-8. Validate all acceptance tests and monitor for at least one agreed stabilization period.
-9. Move or eliminate remaining DNS, DHCP, file, print, certificate, authentication, and service-account dependencies.
-10. Demote and decommission the domain controller only after formal dependency and acceptance sign-off.
+7. Have each assigned user complete an online Entra sign-in, then test lock/restart sign-in with the network disconnected; record which local applications and files remain usable.
+8. Migrate remaining PCs one at a time, keeping the domain controller available for rollback.
+9. Validate all acceptance tests and monitor for at least one agreed stabilization period.
+10. Move or eliminate remaining DNS, DHCP, file, print, certificate, authentication, and service-account dependencies.
+11. Demote and decommission the domain controller only after formal dependency and acceptance sign-off.
 
 ### 5.4 Advantages
 
 - Best direct fit for managing company-owned Windows PCs without AD DS.
 - Strong Windows-native device configuration, compliance, encryption, update, application, and security controls.
 - Physical PCs continue to work locally during a temporary Internet outage after cached sign-in, although cloud applications remain unavailable.
+- Cached sign-in provides short-term local continuity only for users who have previously signed in online; it does not support first-time sign-in, new-device enrollment, password recovery, or live cloud authentication during the outage.
 - Lower Azure infrastructure cost and complexity than AVD.
 - Supports repeatable device deployment and replacement through Windows Autopilot for compatible procurement scenarios.
 - Provides a credible path to a single authoritative identity across Windows and Google Workspace.
@@ -206,7 +209,7 @@ Solution 1 removes the on-premises domain controller as an organization-wide dep
 
 - Entra ID and Intune are provider-managed control-plane dependencies. Protect against tenant lockout with two separately protected emergency accounts, independent recovery methods, documented escalation, and tested local-device outage behavior.
 - Entra SAML for Google Workspace can become a shared authentication path. Pilot federation, retain a protected direct Google administrative recovery path, and test federation bypass or rollback before enforcing SSO broadly.
-- The single ISP/router/firewall path shown in the logical design is a local single point of failure. Back up its configuration, protect it with a UPS, maintain a rapid-replacement plan, and add dual-WAN or cellular failover only when the approved RTO and business value justify the cost.
+- The single ISP/router/firewall path shown in the logical design is a local single point of failure. Back up its configuration, protect the edge equipment with a UPS, and maintain a rapid-replacement plan. Keep dual-WAN or 5G/cellular failover optional; add it only when the approved RTO and business value justify the cost.
 - A failed PC is a per-user failure. Keep business data in company-controlled cloud locations, maintain a repeatable Intune/Autopilot rebuild process, and test replacement-device recovery; provide a spare or loaner when the user RTO requires it.
 - Google Workspace synchronization is not backup. Use independent backup with separate credentials, protected retention, documented exports, and periodic sample restores.
 
@@ -477,6 +480,8 @@ The project is complete only when:
 
 - [Microsoft: Plan a Microsoft Entra join deployment](https://learn.microsoft.com/en-us/entra/identity/devices/device-join-plan)
 - [Microsoft: What is a Microsoft Entra joined device?](https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join)
+- [Microsoft: Microsoft Entra device management FAQ](https://learn.microsoft.com/en-us/entra/identity/devices/faq)
+- [Microsoft: Troubleshoot primary refresh token issues](https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-primary-refresh-token)
 - [Microsoft: Windows device enrollment guide for Intune](https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide)
 - [Microsoft: Microsoft 365 business plans and pricing in Canada](https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-plans-and-pricing)
 - [Microsoft: Google Cloud / G Suite Connector SSO with Entra ID](https://learn.microsoft.com/en-us/entra/identity/saas-apps/google-apps-tutorial)
