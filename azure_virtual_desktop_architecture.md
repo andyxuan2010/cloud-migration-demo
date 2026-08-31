@@ -515,6 +515,17 @@ For a six-user deployment, a low-concurrency pilot may fit within a few hundred 
 
 Legacy applications, two-host availability, private endpoints, complex printing, third-party federation, or failed profile authentication can add material effort. The implementation estimate should be revised after Phase 0.
 
+### Standard deployment, operational, and maintenance budget
+
+For a comparable six-user planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, Azure consumption, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
+
+| Cost category | Standard planning amount |
+|---|---:|
+| One-time deployment | **CAD 7,250–15,600** for the documented 58–104 hour basic scope. A low-concurrency pilot may fit within **CAD 6,000–10,800** for 48–72 hours. |
+| Recurring operational cost | **CAD 980–1,850/month** gross for two right-sized session hosts, Microsoft 365 Business Premium without Copilot, retained Google Workspace Business Plus, and backup. A one-host pilot is approximately **CAD 680–1,150/month**, but retains the host single point of failure. |
+| Routine maintenance | **CAD 750–1,800/month** for approximately 6–12 hours of image, host-pool, FSLogix/profile, autoscale, monitoring, patch, release, backup, and recovery administration. A one-host pilot may require approximately 4–8 hours/month. |
+| Excluded or optional items | Hardware replacement, Internet service, optional dual-WAN/5G or UPS, private endpoints, higher regional availability, major application work, incident response, and vendor support contracts. |
+
 ## 11. Analysis and comparison with the other options
 
 ### 11.1 Requirement fit
@@ -642,7 +653,11 @@ If remote work or portability is enabled, also verify approved external-device p
 
 ## 15. References
 
+- [Microsoft 365 Business Premium pricing in Canada](https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium)
+- [Google Workspace pricing in Canada](https://workspace.google.com/intl/en_ca/business/)
 - [Azure Virtual Desktop licensing](https://learn.microsoft.com/en-us/azure/virtual-desktop/licensing)
+- [Understand and estimate Azure Virtual Desktop costs](https://learn.microsoft.com/en-us/azure/virtual-desktop/understand-estimate-costs)
+- [Azure Pricing Calculator](https://azure.microsoft.com/en-ca/pricing/calculator/)
 - [Azure Virtual Desktop prerequisites](https://learn.microsoft.com/en-us/azure/virtual-desktop/prerequisites)
 - [Deploy Azure Virtual Desktop](https://learn.microsoft.com/en-us/azure/virtual-desktop/deploy-azure-virtual-desktop)
 - [Azure-joined session hosts](https://learn.microsoft.com/en-us/azure/virtual-desktop/azure-ad-joined-session-hosts)

@@ -401,6 +401,17 @@ For a clean six-device environment with simple applications, budget approximatel
 - Windows 11 hardware replacement;
 - optional mobility or BYOD controls.
 
+### Standard deployment, operational, and maintenance budget
+
+For a comparable six-user/six-device planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, endpoint-tooling, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
+
+| Cost category | Standard planning amount |
+|---|---:|
+| One-time deployment | **CAD 3,500–6,600** for 28–44 hours; profile migration, custom settings, application packaging, or supplemental tooling can increase this range. |
+| Recurring operational cost | **CAD 290–540/month** gross for Google Workspace Business Plus, Microsoft Office if needed, supplemental endpoint/RMM tooling, and independent backup. The annual Google commitment uses **CAD 28.70/user/month**; flexible billing can add approximately **CAD 34/month** for 6 users. Subtract existing licenses and count only upgrade deltas. |
+| Routine maintenance | **CAD 375–900/month** for approximately 3–6 hours of endpoint inventory, GCPW/device-policy review, patch and security review, onboarding/offboarding, backup checks, and recovery testing. |
+| Excluded or optional items | Hardware replacement, Internet service, optional dual-WAN/5G or UPS, major application work, incident response, and vendor support contracts. |
+
 ## 11. Comparison with the other proposed solutions
 
 The comparison uses the updated requirements, where remote work and user/device portability are optional.
@@ -495,6 +506,7 @@ The design is accepted only when:
 ## 15. References
 
 - [Install Google Credential Provider for Windows](https://knowledge.workspace.google.com/admin/devices/install-google-credential-provider-for-windows)
+- [Google Workspace pricing in Canada](https://workspace.google.com/intl/en_ca/business/)
 - [Sign in to Windows after GCPW installation](https://support.google.com/a/users/answer/9250915?hl=en)
 - [Enable Windows device management](https://knowledge.workspace.google.com/admin/devices/enable-windows-device-management)
 - [Device requirements for Google endpoint management](https://knowledge.workspace.google.com/admin/devices/device-requirements-for-google-endpoint-management)

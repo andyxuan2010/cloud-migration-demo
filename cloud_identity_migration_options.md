@@ -227,8 +227,8 @@ The solution must not be described as fully highly available unless the applicab
 
 | Item | Budgetary estimate |
 |---|---:|
-| Microsoft licensing | Use current reseller quote. As a public reference, Microsoft lists Microsoft 365 Business Premium with Copilot at **CAD 43.40/user/month** on annual billing; 6 users = **CAD 260.40/month** before tax. A narrower combination may cost less if Office, security, or Entra/Intune rights already exist. |
-| Google Workspace | Existing subscription retained; incremental cost not included. |
+| Microsoft licensing | Use current reseller quote. As a public reference, Microsoft lists Microsoft 365 Business Premium without Copilot at **CAD 29.80/user/month** on annual billing; 6 users = **CAD 178.80/month** before tax. The no-Teams variant is **CAD 25.50/user/month** when Teams is not required. |
+| Google Workspace | Existing subscription retained; for the comparable model below, Business Plus is **CAD 28.70/user/month** on annual billing, or **CAD 172.20/month** for 6 users. |
 | Cloud backup | CAD 30–100/month, depending on protected services, capacity, retention, and vendor. |
 | Azure consumption | Normally negligible for the identity/device-management design itself; excludes optional logging, automation, or other Azure workloads. |
 | Implementation effort | **32–48 hours** for a clean six-device environment; add remediation time for legacy applications, complex profiles, server roles, or large data volumes. |
@@ -297,7 +297,7 @@ The PCs are not joined to a traditional Windows domain. This is a cloud-first, w
 
 | Item | Budgetary estimate |
 |---|---:|
-| Google Workspace Business Plus | Google publicly lists **USD 22/user/month** on an annual/fixed-term plan or **USD 26.40/user/month** on a flexible plan. For 6 users: **USD 132–158.40/month**, before tax and currency conversion. If already licensed, count only the upgrade delta from the existing edition. |
+| Google Workspace Business Plus | Google’s Canada pricing lists **CAD 28.70/user/month** on an annual plan or **CAD 34.40/user/month** on a flexible plan. For 6 users: **CAD 172.20–206.40/month**, before tax. If already licensed, count only the upgrade delta from the existing edition. |
 | Microsoft Office | If not already licensed, Microsoft publicly lists Apps for business at **CAD 14.20/user/month** on annual billing; 6 users = **CAD 85.20/month** before tax. Confirm whether the actual existing license can be retained. |
 | Supplemental endpoint/RMM tooling | CAD 0–180/month. This cannot be fixed until security and management gaps are assessed. |
 | Cloud backup | CAD 30–100/month, depending on protected services, capacity, retention, and vendor. |
@@ -389,12 +389,12 @@ Sizing must be tested with actual browser tabs, Google Drive behavior, Office fi
 
 | Item | Budgetary estimate |
 |---|---:|
-| Eligible Microsoft user licensing | Use current reseller quote. The same public **CAD 43.40/user/month** Microsoft 365 Business Premium with Copilot reference produces **CAD 260.40/month** for 6 users. Other eligible AVD licenses may be appropriate depending on existing entitlements. |
-| Azure AVD infrastructure | **CAD 300–700/month** budgetary range for session-host compute, profile storage, backup, monitoring, and modest network usage. High availability, private networking, extended hours, heavy workloads, or larger profiles can exceed this range. Validate with the Azure Pricing Calculator and a measured pilot. |
+| Eligible Microsoft user licensing | Use current reseller quote. As a comparable reference, Microsoft 365 Business Premium without Copilot is **CAD 29.80/user/month** on annual billing, or **CAD 178.80/month** for 6 users. Other eligible AVD licenses may be appropriate depending on existing entitlements. |
+| Azure AVD infrastructure | **CAD 300–700/month** for a lean one-host pilot, or **CAD 600–1,400/month** for two right-sized hosts with better availability. These ranges cover session-host compute, profile storage, backup, monitoring, and modest network usage; validate with the Azure Pricing Calculator and a measured pilot. |
 | Google Workspace | Existing subscription retained; incremental cost not included. |
 | Cloud backup outside AVD profiles | CAD 30–100/month, depending on protected data and retention. |
-| Implementation effort | **48–72 hours** for a basic production deployment and pilot; application complexity, private networking, high availability, or formal disaster recovery increases effort. |
-| Indicative one-time services at CAD 125–150/hour | **CAD 6,000–10,800** |
+| Implementation effort | **58–104 hours** for the basic deployment scope in the architecture document; a low-concurrency pilot may fit within **48–72 hours**. Application complexity, private networking, high availability, or formal disaster recovery increases effort. |
+| Indicative one-time services at CAD 125–150/hour | **CAD 7,250–15,600** for the basic scope; **CAD 6,000–10,800** for a 48–72 hour pilot |
 
 ## 8. Comparative assessment
 
@@ -418,13 +418,17 @@ The numbers are decision aids, not measurements. A mandatory requirement overrid
 
 ## 9. Cost summary
 
-| Option | Main monthly costs | One-time implementation estimate |
-|---|---:|---:|
-| Solution 1: Entra ID + Intune | Approximately CAD 260.40 Microsoft reference licensing + CAD 30–100 backup; subtract already-owned entitlements and obtain a reseller quote | CAD 4,000–7,200 |
-| 2. Google + GCPW | USD 132–158.40 Google Business Plus + CAD 85.20 Office if needed + CAD 0–180 supplemental endpoint tooling + CAD 30–100 backup | CAD 3,500–6,600 |
-| 3. AVD | Approximately CAD 260.40 eligible Microsoft reference licensing + CAD 300–700 Azure + CAD 30–100 backup, while retaining Google Workspace | CAD 6,000–10,800 |
+### 9.1 Standard six-user cost model
 
-These figures are planning estimates, not quotations. They exclude tax, reseller margin, hardware replacement, Internet upgrades, formal project management, after-hours cutover, regulated-compliance work, large data migration, complex application remediation, and ongoing managed support. Google pricing is shown in USD where the public source provides USD figures. Azure consumption must be recalculated for the selected Canadian region, workload schedule, reservation model, storage tier, and availability design.
+The following comparable model assumes six users and six PCs, normal SaaS and Office workloads, annual commitments where available, Canadian dollars before tax, and no major hardware replacement. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
+
+| Solution | Typical deployment cost | Typical operational cost | Typical maintenance cost |
+|---|---:|---:|---:|
+| Solution 1: Entra ID + Intune | **CAD 4,000–7,200** (32–48 hours) | **CAD 380–450/month** gross: Microsoft 365 Business Premium without Copilot, retained Google Workspace Business Plus, and backup. The no-Teams Microsoft SKU lowers this to approximately **CAD 355–425/month**. | **CAD 250–600/month** (2–4 hours) |
+| Option 2: Google Workspace + GCPW | **CAD 3,500–6,600** (28–44 hours) | **CAD 290–540/month** gross: Google Workspace Business Plus, Microsoft Office if needed, supplemental endpoint/RMM tooling, and backup. Flexible Google billing can add approximately **CAD 34/month** for 6 users. | **CAD 375–900/month** (3–6 hours) |
+| Option 3: Azure Virtual Desktop | **CAD 7,250–15,600** (58–104 hours); a basic pilot may be **CAD 6,000–10,800** | **CAD 980–1,850/month** gross for two right-sized hosts, Microsoft and retained Google licensing, and backup. A one-host pilot is approximately **CAD 680–1,150/month** but retains the host single point of failure. | **CAD 750–1,800/month** (6–12 hours) |
+
+These are planning estimates, not quotations. Subtract existing entitlements to determine incremental cost. The totals exclude tax, reseller margin, hardware replacement, Internet service, optional dual-WAN/5G or UPS, formal project management, after-hours cutover, regulated-compliance work, large data migration, complex application remediation, and ongoing managed support. Azure consumption must be recalculated for the selected Canadian region, workload schedule, storage tier, and availability design.
 
 ## 10. Recommendation
 
@@ -484,13 +488,16 @@ The project is complete only when:
 - [Microsoft: Troubleshoot primary refresh token issues](https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-primary-refresh-token)
 - [Microsoft: Windows device enrollment guide for Intune](https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide)
 - [Microsoft: Microsoft 365 business plans and pricing in Canada](https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-plans-and-pricing)
+- [Microsoft: Microsoft 365 Business Premium pricing in Canada](https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium)
 - [Microsoft: Google Cloud / G Suite Connector SSO with Entra ID](https://learn.microsoft.com/en-us/entra/identity/saas-apps/google-apps-tutorial)
 - [Microsoft: Google Workspace automatic provisioning with Entra ID](https://learn.microsoft.com/en-us/entra/identity/saas-apps/g-suite-provisioning-tutorial)
 - [Google: Enhanced desktop security for Windows overview](https://knowledge.workspace.google.com/admin/devices/overview-enhanced-desktop-security-for-windows)
 - [Google: Install Google Credential Provider for Windows](https://knowledge.workspace.google.com/admin/devices/install-google-credential-provider-for-windows)
 - [Google: Enable Windows device management](https://knowledge.workspace.google.com/admin/devices/enable-windows-device-management)
 - [Google: Google Workspace business editions](https://knowledge.workspace.google.com/admin/getting-started/editions/business-editions)
+- [Google: Google Workspace pricing in Canada](https://workspace.google.com/intl/en_ca/business/)
 - [Microsoft: Azure Virtual Desktop licensing](https://learn.microsoft.com/en-us/azure/virtual-desktop/licensing)
+- [Microsoft: Understand and estimate Azure Virtual Desktop costs](https://learn.microsoft.com/en-us/azure/virtual-desktop/understand-estimate-costs)
 - [Microsoft: Azure Virtual Desktop prerequisites](https://learn.microsoft.com/en-us/azure/virtual-desktop/prerequisites)
 - [Microsoft: FSLogix profile containers for Azure Virtual Desktop](https://learn.microsoft.com/en-us/azure/virtual-desktop/fslogix-profile-containers)
 - [Microsoft: Azure Virtual Desktop autoscale scaling plans](https://learn.microsoft.com/en-us/azure/virtual-desktop/autoscale-create-assign-scaling-plan)

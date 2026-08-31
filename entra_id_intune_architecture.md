@@ -375,7 +375,7 @@ The exact subscription choice must be based on existing entitlements and a curre
 
 ### Consolidated Microsoft profile
 
-- Microsoft 365 Business Premium if the combined value of Entra ID P1, Intune, Office, Defender for Business, and related controls justifies the cost;
+- Microsoft 365 Business Premium without Copilot if the combined value of Entra ID P1, Intune, Office, Defender for Business, and related controls justifies the cost;
 - Google Workspace still retained for Gmail, Drive, and Docs;
 - no Copilot or unused Microsoft collaboration services unless separately approved;
 - independent backup remains required.
@@ -395,6 +395,17 @@ For a clean six-device environment, a realistic implementation range is approxim
 - support and administration;
 - Windows 11 hardware replacement where current PCs fail eligibility;
 - optional mobility or BYOD controls.
+
+### Standard deployment, operational, and maintenance budget
+
+For a comparable six-user/six-device planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
+
+| Cost category | Standard planning amount |
+|---|---:|
+| One-time deployment | **CAD 4,000–7,200** for 32–48 hours; profile migration, legacy applications, or GPO remediation can increase this range. |
+| Recurring operational cost | **CAD 380–450/month** gross for Microsoft 365 Business Premium without Copilot, retained Google Workspace Business Plus, and independent backup. If Teams is not required, the no-Teams Microsoft SKU produces approximately **CAD 355–425/month**. Subtract existing licenses to calculate the incremental cost. |
+| Routine maintenance | **CAD 250–600/month** for approximately 2–4 hours of policy review, patch/compliance review, enrollment support, access changes, backup checks, and recovery testing. |
+| Excluded or optional items | Hardware replacement, Internet service, optional dual-WAN/5G or UPS, major application work, incident response, and vendor support contracts. |
 
 There is no recurring AVD session-host, profile-container, Azure Files, or Azure network cost in this baseline architecture.
 
@@ -504,6 +515,8 @@ The design is accepted only when:
 - [Microsoft Entra device management FAQ: cached sign-in behavior](https://learn.microsoft.com/en-us/entra/identity/devices/faq)
 - [Microsoft Entra primary refresh token troubleshooting](https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-primary-refresh-token)
 - [Microsoft Intune Windows enrollment guide](https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide)
+- [Microsoft 365 Business Premium pricing in Canada](https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium)
+- [Google Workspace pricing in Canada](https://workspace.google.com/intl/en_ca/business/)
 - [Windows Autopilot registration overview](https://learn.microsoft.com/en-us/autopilot/registration-overview)
 - [Windows Autopilot for existing devices](https://learn.microsoft.com/en-us/autopilot/existing-devices)
 - [Microsoft Entra SSO for Google Workspace](https://learn.microsoft.com/en-us/entra/identity/saas-apps/google-apps-tutorial)
