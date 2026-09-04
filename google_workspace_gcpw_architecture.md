@@ -287,6 +287,24 @@ The domain controller must not be demoted until evidence shows that:
 
 ## 8. Migration implementation plan
 
+### Time estimate
+
+The following is a planning estimate for six initial users and up to 10 Windows PCs. **Effort** is hands-on implementation labor; **elapsed time** includes user acceptance, vendor/licensing decisions, migration batches, change windows, and stabilization. The clean-environment total aligns with the **28–44 hour** budgetary range in section 10. Profile migration, supplemental endpoint controls, custom settings, MSI packaging, or application remediation can increase the effort to approximately **40–60 hours**.
+
+| Phase | Effort | Indicative elapsed time |
+|---|---:|---:|
+| Phase 0 — Discovery and feasibility | 4–6 hours | 2–5 business days |
+| Phase 1 — Google Workspace foundation | 3–5 hours | 2–3 business days |
+| Phase 2 — GCPW and Windows-management pilot | 6–10 hours | 1–2 weeks |
+| Phase 3 — Security and control-gap validation | 5–8 hours | 1–2 weeks |
+| Phase 4 — Profile and data migration | 4–6 hours | 1–2 weeks |
+| Phase 5 — Production rollout | 2–3 hours | 1–2 weeks |
+| Phase 6 — Network and service migration | 2–3 hours | 3–5 business days |
+| Phase 7 — Stabilization and AD DS decommissioning | 2–3 hours | 1–2 weeks |
+| **Total implementation effort** | **28–44 hours** | **Approximately 5–9 weeks** |
+
+The elapsed range assumes one implementation owner working part time and does not include hardware procurement, licensing-approval delays, major application redevelopment, or ongoing managed support.
+
 ### Phase 0 — Discovery and feasibility
 
 - inventory AD users, groups, computers, GPOs, DNS, DHCP, file, print, certificates, VPN/RADIUS, scripts, scheduled tasks, and service accounts;

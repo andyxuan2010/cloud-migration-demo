@@ -361,6 +361,25 @@ The final gate requires a current dependency inventory, exports of required AD i
 
 ## 8. Migration implementation plan
 
+### Time estimate
+
+The following is a planning estimate for six initial users, up to 10 access terminals, and a basic AVD deployment. **Effort** is hands-on implementation labor; **elapsed time** includes Azure subscription and licensing decisions, quota/vendor dependencies, user acceptance, migration batches, change windows, and stabilization. The phase totals align with the **58–104 hour** basic implementation range in section 10.
+
+| Phase | Effort | Indicative elapsed time |
+|---|---:|---:|
+| Phase 0 — Discovery and AVD fit decision | 8–12 hours | 1–2 weeks |
+| Phase 1 — Azure foundation and governance | 6–10 hours | 3–7 business days |
+| Phase 2 — Identity and access foundation | 4–6 hours | 3–5 business days |
+| Phase 3 — Image and application engineering | 12–20 hours | 2–3 weeks |
+| Phase 4 — AVD service and host-pool pilot | 10–16 hours | 1–2 weeks |
+| Phase 5 — Profile, storage, and recovery pilot | 8–16 hours | 1–2 weeks |
+| Phase 6 — User and terminal pilot | 6–10 hours | 1–2 weeks |
+| Phase 7 — Production rollout | 2–4 hours | 1–2 weeks |
+| Phase 8 — Stabilization and AD DS retirement | 2–10 hours | 1–2 weeks |
+| **Total basic implementation effort** | **58–104 hours** | **Approximately 10–16 weeks** |
+
+The elapsed range assumes one implementation owner working part time and does not include hardware procurement, licensing-approval delays, major application redevelopment, regional business-continuity design, or ongoing managed support. Two-host production availability, private endpoints, complex peripherals, or failed profile authentication can increase the estimate.
+
 ### Phase 0 — Discovery and AVD fit decision
 
 - inventory users, PCs, Windows editions, Office licenses, Google Workspace editions, applications, peripherals, bandwidth, and AD dependencies;
@@ -485,6 +504,32 @@ Each user requires an eligible Windows/AVD entitlement. Confirm the exact entitl
 - third-party application licenses for shared sessions; and
 - external-user licensing if any nonemployee or external access is proposed.
 
+### Microsoft and Google license profile
+
+Prices below are Canadian list-price planning assumptions checked on **2026-09-04**, before applicable tax. Confirm the final quote, currency, billing term, existing entitlements, and AVD eligibility before purchase.
+
+| Required item | Current planning price | Six-user planning cost | Scope and notes |
+|---|---:|---:|---|
+| Microsoft 365 Business Premium with Teams | **CAD 29.80/user/month**, annual commitment | **CAD 178.80/month** or **CAD 2,145.60/year** | Recommended AVD user-license baseline; includes Entra ID, Intune, Office, and Defender for Business. Copilot is excluded. Confirm the purchased SKU is assigned to each AVD user. |
+| Microsoft 365 Business Premium without Teams | **CAD 25.50/user/month**, annual commitment | **CAD 153.00/month** or **CAD 1,836.00/year** | Use only if Teams is not required and the no-Teams SKU meets the AVD, Office, security, and collaboration requirements. |
+| Google Workspace Business Plus | **CAD 28.70/user/month** annual commitment; **CAD 34.40** flexible billing | **CAD 172.20/month** annual plan or **CAD 206.40/month** flexible | Retained for Gmail, Drive, Docs, Shared drives, and collaboration inside the hosted desktop. |
+| Azure subscription | **No fixed subscription fee; pay-as-you-go for Azure resources** | **CAD 0 fixed** | Required company-owned Azure management and billing boundary. AVD compute, disks, Azure Files, networking, monitoring, autoscale, and backup are consumption charges. |
+| Independent Google Workspace and endpoint backup | **CAD 50–100/month planning allowance** | **CAD 50–100/month** | Vendor quote required; Google Drive synchronization is not a backup. |
+
+Microsoft documents Microsoft 365 Business Premium as an eligible internal-user license for Windows 11 Enterprise multi-session Azure Virtual Desktop. Every internal user who accesses AVD must have an eligible license assigned. Entra ID Free alone is not enough for the target Conditional Access and automatic-enrollment controls, while standalone Intune Plan 1 plus Entra ID P1 should not be treated as an AVD Windows entitlement; if Business Premium is not selected, choose another license explicitly listed as eligible for AVD and validate Office/shared-computer rights separately.
+
+Intune Plan 1 is **CAD 10.90/user/month** when purchased standalone with annual billing; Plan 2 is an optional **CAD 5.40/user/month** add-on, and Intune Suite is an optional **CAD 13.60/user/month** add-on. These add-ons are not included in the baseline AVD estimate. Do not purchase standalone Entra ID P1 or Intune Plan 1 on top of Business Premium unless a reseller confirms a specific uncovered requirement.
+
+### License-only recurring baseline
+
+| Profile | Monthly estimate | Annual estimate | Assumptions |
+|---|---:|---:|---|
+| Business Premium with Teams + Google annual plan + backup | **CAD 401–451/month** | **CAD 4,812–5,412/year** | Six users; excludes AVD Azure resource consumption. |
+| Business Premium without Teams + Google annual plan + backup | **CAD 375–425/month** | **CAD 4,502–5,102/year** | Six users; excludes AVD Azure resource consumption. |
+| Flexible Google billing adjustment | **Add CAD 34.20/month** | **Add CAD 410.40/year** | Applies to either Microsoft 365 profile when Google is billed flexibly instead of annually. |
+
+The Azure subscription itself is not a monthly license line. AVD resources generate consumption charges even when no additional Azure subscription fee applies. Use the Azure Pricing Calculator after the concurrency pilot to estimate the selected host size/count, disk tier, Azure Files profile storage, backup, Log Analytics, network, and autoscale schedule. The gross AVD operating ranges below already include the license-only baseline, backup, and estimated Azure consumption; do not add the license-only table a second time.
+
 Google Workspace remains a separate subscription and is not replaced by AVD. AVD does not eliminate Google Workspace backup, domain ownership, or application licensing.
 
 ### Capacity profiles
@@ -535,7 +580,7 @@ For a comparable six-user planning model, use Canadian dollars before tax and an
 |---|---:|
 | One-time deployment | **CAD 7,250–15,600** for the documented 58–104 hour basic scope. A low-concurrency pilot may fit within **CAD 6,000–10,800** for 48–72 hours. |
 | Recurring operational cost | **CAD 980–1,850/month** gross for two right-sized session hosts, Microsoft 365 Business Premium without Copilot, retained Google Workspace Business Plus, and backup. A one-host pilot is approximately **CAD 680–1,150/month**, but retains the host single point of failure. |
-| Routine maintenance | **CAD 750–1,800/month** for approximately 6–12 hours of image, host-pool, FSLogix/profile, autoscale, monitoring, patch, release, backup, and recovery administration. A one-host pilot may require approximately 4–8 hours/month. |
+| Routine maintenance | **CAD 750–1,800/month** for approximately 6–12 hours of image, host-pool, FSLogix/profile, autoscale, monitoring, patch, release, backup, and recovery administration. A one-host pilot may require approximately 4–8 hours/month, or approximately **CAD 500–1,200/month**. |
 | Excluded or optional items | Hardware replacement, Internet service, optional dual-WAN/5G or UPS, private endpoints, higher regional availability, major application work, incident response, and vendor support contracts. |
 
 ## 11. Analysis and comparison with the other options
@@ -666,6 +711,9 @@ If remote work or portability is enabled, also verify approved external-device p
 ## 15. References
 
 - [Microsoft 365 Business Premium pricing in Canada](https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium)
+- [Microsoft Intune plans and pricing in Canada](https://www.microsoft.com/en-ca/security/business/microsoft-intune-pricing)
+- [Microsoft Intune licensing](https://learn.microsoft.com/en-us/intune/fundamentals/licensing)
+- [Microsoft Entra licensing](https://learn.microsoft.com/en-us/entra/fundamentals/licensing)
 - [Google Workspace pricing in Canada](https://workspace.google.com/intl/en_ca/business/)
 - [Azure Virtual Desktop licensing](https://learn.microsoft.com/en-us/azure/virtual-desktop/licensing)
 - [Understand and estimate Azure Virtual Desktop costs](https://learn.microsoft.com/en-us/azure/virtual-desktop/understand-estimate-costs)
