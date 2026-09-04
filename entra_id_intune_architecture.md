@@ -1,10 +1,10 @@
-# Solution 1 — Microsoft Entra ID + Microsoft Intune
+# Option 1 — Microsoft Entra ID + Microsoft Intune
 
 ## Detailed architecture design, analysis, and comparison
 
-**Design scope:** 10 Windows PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.
+**Design scope:** 6-10 Windows 11 PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.
 
-**Document relationship:** This is the detailed design for Solution 1. The authoritative baseline remains [`requirements.md`](requirements.md). Remote work and user/device portability are optional capabilities; security, recovery, endpoint control, and AD dependency removal remain mandatory.
+**Document relationship:** This is the detailed design for Option 1. The authoritative baseline remains [`requirements.md`](requirements.md). Remote work and user/device portability are optional capabilities; security, recovery, endpoint control, and AD dependency removal remain mandatory.
 
 ## 1. Executive decision
 
@@ -21,30 +21,15 @@ The recommended baseline is:
 - Entra SAML SSO to Google Workspace, with automated provisioning only if tested and required;
 - Google Drive/shared drives for approved business data, with independent backup;
 - the office router/firewall providing DHCP and DNS forwarding after AD DS retirement;
-- cached Entra sign-in enabled through a successful initial online sign-in and verified for every assigned user/device;
 - optional remote work or secondary-device portability enabled only through a separate decision.
 
 Entra ID is not hosted AD DS. It does not provide traditional domain controllers, Group Policy, LDAP, Kerberos, or NTLM in the same way as AD DS. Every remaining dependency on those protocols must be removed, replaced, or explicitly retained before the domain controller is decommissioned.
 
 ## 2. Architecture diagram
 
-![Microsoft Entra ID and Intune target logical architecture](images/entra_id_intune_target_architecture.png)
+![Microsoft Entra ID and Intune target architecture](entra_id_intune_target_architecture.png)
 
-The diagram shows the normal control and data paths in blue. The orange dashed path is optional mobility and is not required for acceptance of the baseline design. It is a logical baseline, not an automatic high-availability topology; the single-point-of-failure review below defines the additional controls required for the approved recovery objectives.
-
-### 2.1 Single-point-of-failure verification and reliability controls
-
-The design removes the on-premises domain controller as an organization-wide infrastructure dependency, but it does not make every service path redundant. The following review distinguishes accepted managed-service dependencies from local single points of failure that require mitigation or explicit business acceptance:
-
-| Component or path | Failure mode | Baseline assessment | Reliability control or decision |
-|---|---|---|---|
-| Entra ID and Intune control plane | Provider outage or tenant lockout affects new authentication, policy changes, enrollment, and remote actions. | No customer-managed replica is introduced; this is an external managed-service dependency. Previously signed-in users have limited local continuity through cached Windows credentials, not live Entra validation. | Maintain two separately protected emergency accounts, independent recovery methods, documented vendor escalation, and tested local-device outage behavior. Do not make a single administrator or federation rule the only recovery path. |
-| Entra SAML to Google Workspace | SSO misconfiguration or Entra outage can prevent normal Google sign-in if federation is enforced without a tested fallback. | A potentially shared authentication path. | Pilot SSO, preserve a protected direct Google administrative recovery path, document federation bypass/rollback, and test account recovery before tenant-wide enforcement. |
-| Office ISP and router/firewall | A failed circuit, modem, router/firewall, switch, Wi-Fi component, or power event can interrupt cloud access for the office. | The logical diagram shows one office network path; this is a local single point of failure unless separately engineered. | Back up network configuration, protect the edge equipment with a UPS, retain a rapid-replacement/spare plan, and test failover. Keep dual-WAN or 5G/cellular backup optional; add it only when the approved RTO or business-critical cloud access justifies its recurring cost. |
-| Individual Windows PC | A failed endpoint prevents that user from working locally. | A per-user failure, not an organization-wide identity or data failure, provided data is not local-only. | Keep business data in company-controlled cloud locations, maintain repeatable Intune/Autopilot rebuild procedures, and test replacement-device recovery. Provide a spare or loaner when the user RTO requires it. |
-| Google Workspace data and backup | SaaS deletion, account compromise, provider outage, or backup failure can affect business data. | Synchronization alone is not recovery. | Use independent backup with separate administrative credentials, protected retention, documented exports, and periodic sample restores. Verify the backup service itself is monitored and recoverable. |
-
-For this small environment, active-active replacement infrastructure is not required by default. Reliability is improved primarily by removing local AD DS dependencies, keeping data and configuration recoverable, separating emergency administration from normal SSO, and using cached Entra sign-in for short local outages. Dual-WAN/5G and UPS coverage remain optional resilience enhancements selected by the approved RTO and business case. The design must not claim full office availability unless the secondary connectivity, UPS, replacement equipment, and failover tests are actually approved and completed.
+The diagram shows the normal control and data paths in blue. The orange dashed path is optional mobility and is not required for acceptance of the baseline design.
 
 ## 3. Design principles
 
@@ -104,9 +89,31 @@ Each retained PC becomes:
 - administered through controlled elevation rather than permanent local-administrator rights;
 - assigned a managed local administrator account with Windows LAPS or an equivalent password-rotation control;
 - inventoried with owner, serial number, operating-system version, compliance state, and last-contact information.
-- assigned users must complete one successful online Entra sign-in before offline continuity is accepted; cached sign-in is a local fallback and does not provide live cloud authentication.
 
 ### 4.3 Intune management layer
+
+#### Purpose and problems solved
+
+Microsoft Intune is the cloud endpoint-management service for the Windows PCs. It is the device-control plane in this architecture: it enrolls, configures, secures, updates, inventories, and retires endpoints and applications. Intune also reports device compliance to Microsoft Entra ID so that access policies can use the device's security state. See Microsoft's [Intune overview](https://learn.microsoft.com/en-us/intune/fundamentals/what-is-intune) and [core concepts](https://learn.microsoft.com/en-us/intune/fundamentals/core-concepts).
+
+The boundary between the two services is deliberate:
+
+| Service | Question it answers | Responsibilities |
+|---|---|---|
+| **Microsoft Entra ID** | Who is the user, and may they authenticate? | Users, groups, MFA, Conditional Access, SSO, roles, sign-in logs, and lifecycle status |
+| **Microsoft Intune** | How must the Windows PC be configured, protected, and maintained? | Enrollment, configuration, applications, updates, security posture, compliance, inventory, and remote device actions |
+
+Intune resolves the main operational gaps created by removing the domain controller:
+
+- **GPO loss:** applies required Windows configuration and security outcomes as cloud policies;
+- **manual PC setup:** standardizes enrollment, configuration, applications, and replacement-device provisioning;
+- **patch and security drift:** uses update rings, security baselines, and compliance policies;
+- **uncontrolled software and administration:** deploys approved applications and enforces standard-user and least-privilege controls; and
+- **limited visibility and recovery:** provides inventory, compliance status, alerts, remote actions, and a repeatable rebuild process.
+
+For this option, Intune is not a hosted replacement for AD DS. It does not provide DNS, DHCP, LDAP, Kerberos, file shares, print services, certificates, VPN/RADIUS, or application-specific service accounts. Those dependencies still require separate remediation before AD DS decommissioning.
+
+Intune is effectively mandatory for the full **Entra ID + Intune** target. Entra-only device join would provide cloud identity, but it would not satisfy the architecture's requirements for centralized Windows configuration, patching, compliance, application deployment, inventory, endpoint recovery, and low-effort remote administration. The six-to-ten-PC deployment should use a deliberately small policy model rather than enterprise-scale policy sprawl.
 
 Keep the policy model deliberately small:
 
@@ -217,19 +224,6 @@ For existing domain PCs, a clean rebuild is often more reliable than trying to c
 
 This flow is not required for the baseline architecture. If enabled, the user connects from an approved managed device or controlled BYOD path using the same corporate identity, MFA, access policy, logging, and offboarding controls. Direct inbound access to the office LAN is prohibited. Remote performance and lost-device/token-revocation scenarios must be tested before approval.
 
-### 5.5 Office Internet-outage continuity flow
-
-Cached Entra sign-in is the baseline local-continuity control for a temporary office Internet outage. It is not a real-time authentication service and does not remove the need for resilient connectivity.
-
-1. While the device has Internet access, the assigned user completes a successful Entra sign-in and the device completes enrollment and policy delivery.
-2. The administrator verifies that the user can sign in after locking and restarting the same device with its network disconnected.
-3. During a short outage, the user can use the cached Windows sign-in and approved local applications or files already available offline.
-4. Gmail, Google Drive online content, SSO, password reset, new-user sign-in, device enrollment, policy changes, and cloud-dependent applications may be unavailable until connectivity returns.
-5. A new user or newly rebuilt device must use the optional dual-WAN/5G path, another approved Internet connection, or a staged replacement process for its first online sign-in; cached sign-in cannot bootstrap a new profile.
-6. When connectivity returns, the device must check in, refresh cloud tokens and policy, and report compliance before the outage is closed.
-
-The pilot must test this flow for each user/device class. The test result must record which local applications and files remain usable, the expected outage duration, and the recovery action for new or rebuilt devices.
-
 ## 6. Security baseline
 
 | Control | Required baseline | Notes |
@@ -243,8 +237,7 @@ The pilot must test this flow for each user/device class. The test result must r
 | Privilege | Standard user; controlled elevation; Windows LAPS/equivalent | No permanent local admin by default |
 | Updates | Pilot and standard rings with deadlines and exception reporting | Do not leave Windows 10 unsupported without an approved temporary plan |
 | Data | Shared-drive ownership, independent backup, restore testing | Synchronization alone is not backup |
-| Offline identity continuity | Prior-user cached Entra sign-in, BitLocker, and tested local productivity | First sign-in, new profile, password recovery, cloud apps, and policy refresh require connectivity |
-| Network | Firewall, guest isolation, outbound-only cloud access, no Internet RDP, protected configuration | UPS and dual-WAN/cellular failover are added only when the approved RTO requires them |
+| Network | Firewall, guest isolation, outbound-only cloud access, no Internet RDP | Local peripherals remain a discovery and pilot item |
 | Logging | Entra, Intune, endpoint-security, backup, and firewall logs | Use exception-based review appropriate to the business size |
 
 ## 7. AD DS dependency-removal gate
@@ -375,7 +368,7 @@ The exact subscription choice must be based on existing entitlements and a curre
 
 ### Consolidated Microsoft profile
 
-- Microsoft 365 Business Premium without Copilot if the combined value of Entra ID P1, Intune, Office, Defender for Business, and related controls justifies the cost;
+- Microsoft 365 Business Premium if the combined value of Entra ID P1, Intune, Office, Defender for Business, and related controls justifies the cost;
 - Google Workspace still retained for Gmail, Drive, and Docs;
 - no Copilot or unused Microsoft collaboration services unless separately approved;
 - independent backup remains required.
@@ -384,7 +377,7 @@ The proposal must not assume that a Microsoft 365 bundle is automatically cheape
 
 ### Budgetary effort
 
-For a clean 10-device environment, a realistic implementation range is approximately **32–48 hours**. Allow approximately **48–64 hours** when profile migration, legacy applications, complex GPO translation, Google account matching, or AD-hosted services require remediation. This excludes major hardware replacement, complex application redevelopment, formal compliance work, and ongoing managed support.
+For a clean six-device environment, a realistic implementation range is approximately **32–48 hours**. Allow approximately **48–64 hours** when profile migration, legacy applications, complex GPO translation, Google account matching, or AD-hosted services require remediation. This excludes major hardware replacement, complex application redevelopment, formal compliance work, and ongoing managed support.
 
 ### Main cost drivers
 
@@ -395,17 +388,6 @@ For a clean 10-device environment, a realistic implementation range is approxima
 - support and administration;
 - Windows 11 hardware replacement where current PCs fail eligibility;
 - optional mobility or BYOD controls.
-
-### Standard deployment, operational, and maintenance budget
-
-For a comparable six-user/10-device planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
-
-| Cost category | Standard planning amount |
-|---|---:|
-| One-time deployment | **CAD 4,000–7,200** for 32–48 hours; profile migration, legacy applications, or GPO remediation can increase this range. |
-| Recurring operational cost | **CAD 380–450/month** gross for Microsoft 365 Business Premium without Copilot, retained Google Workspace Business Plus, and independent backup. If Teams is not required, the no-Teams Microsoft SKU produces approximately **CAD 355–425/month**. Subtract existing licenses to calculate the incremental cost. |
-| Routine maintenance | **CAD 250–600/month** for approximately 2–4 hours of policy review, patch/compliance review, enrollment support, access changes, backup checks, and recovery testing. |
-| Excluded or optional items | Hardware replacement, Internet service, optional dual-WAN/5G or UPS, major application work, incident response, and vendor support contracts. |
 
 There is no recurring AVD session-host, profile-container, Azure Files, or Azure network cost in this baseline architecture.
 
@@ -427,11 +409,11 @@ The comparison is against the updated requirements, where remote work and user/d
 | Replacement-device recovery | Strong with Intune and documented rebuild | Conditional | Strong for hosted profile, but infrastructure-dependent |
 | Suitability for this baseline | **Preferred** | **Conditional alternative** | **Exception only** |
 
-### Why Solution 1 remains preferred
+### Why Option 1 remains preferred
 
 The requirements make centrally managed Windows security, encryption, patching, inventory, application deployment, and local-admin control mandatory. Intune maps most directly to those requirements without introducing a new desktop-hosting platform.
 
-### When Solution 2 may be selected
+### When Option 2 may be selected
 
 Select Google Workspace + GCPW only if discovery proves that:
 
@@ -441,7 +423,7 @@ Select Google Workspace + GCPW only if discovery proves that:
 - the business accepts a workgroup-style Windows operating model;
 - the lower cost and simpler Google-centered administration outweigh Intune’s stronger Windows controls.
 
-### When Solution 3 may be selected
+### When Option 3 may be selected
 
 Select AVD only if a documented requirement justifies it, such as:
 
@@ -478,10 +460,6 @@ The design is accepted only when:
 - required Office, Google Workspace, communication, printing, scanning, and peripheral workflows pass user acceptance;
 - BitLocker recovery keys are escrowed and the local-admin recovery process works;
 - onboarding, offboarding, device replacement, emergency access, and support procedures are documented and tested;
-- the two emergency accounts and the direct Google recovery or federation-rollback path have passed a controlled recovery test;
-- every assigned user has completed an online Entra sign-in and passed the offline lock/restart continuity test on the assigned device;
-- the documented outage procedure identifies unavailable cloud functions and the recovery path for new users or rebuilt devices;
-- router/firewall configuration backup and rapid replacement procedures are documented; any approved secondary-WAN, UPS, or failover control has passed its test;
 - user and shared data are owned correctly, independently backed up, and sample-restored;
 - all DNS, DHCP, file, print, certificate, VPN, RADIUS, LDAP, Kerberos, NTLM, script, scheduled-task, and service-account dependencies have documented replacements or are proven unused;
 - the router/firewall provides the approved post-AD DNS/DHCP functions;
@@ -493,14 +471,11 @@ The design is accepted only when:
 
 ## 14. Decisions required before implementation
 
-- Confirm Entra ID as the authoritative workforce identity for Solution 1.
+- Confirm Entra ID as the authoritative workforce identity for Option 1.
 - Confirm the existing Google Workspace edition and whether SAML/provisioning features are available.
 - Confirm the exact Office licensing model; do not assume Microsoft 365 Business Premium or Copilot.
 - Confirm whether Defender for Business or another endpoint-security product is required.
 - Confirm the independent Google Workspace backup product and retention.
-- Confirm the approved RTO/RPO and whether secondary Internet connectivity, UPS coverage, or spare network equipment is required.
-- Confirm that cached Entra sign-in and the offline local-productivity test are part of the approved continuity procedure, while dual-WAN/5G remains optional.
-- Confirm that the Entra-to-Google SSO fallback and emergency-account recovery tests are scheduled before broad enforcement.
 - Confirm Windows 11 compatibility for every PC and the replacement schedule for failed devices.
 - Confirm which router/firewall will provide DHCP and DNS forwarding.
 - Confirm every file, print, certificate, VPN, RADIUS, script, scheduled-task, and service-account dependency.
@@ -512,11 +487,7 @@ The design is accepted only when:
 ## 15. References
 
 - [Microsoft Entra joined devices](https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join)
-- [Microsoft Entra device management FAQ: cached sign-in behavior](https://learn.microsoft.com/en-us/entra/identity/devices/faq)
-- [Microsoft Entra primary refresh token troubleshooting](https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-primary-refresh-token)
 - [Microsoft Intune Windows enrollment guide](https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide)
-- [Microsoft 365 Business Premium pricing in Canada](https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium)
-- [Google Workspace pricing in Canada](https://workspace.google.com/intl/en_ca/business/)
 - [Windows Autopilot registration overview](https://learn.microsoft.com/en-us/autopilot/registration-overview)
 - [Windows Autopilot for existing devices](https://learn.microsoft.com/en-us/autopilot/existing-devices)
 - [Microsoft Entra SSO for Google Workspace](https://learn.microsoft.com/en-us/entra/identity/saas-apps/google-apps-tutorial)
