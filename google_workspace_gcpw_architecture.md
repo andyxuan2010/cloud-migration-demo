@@ -56,6 +56,18 @@ GCPW is documented as incompatible with third-party mobile-device-management pro
 
 The business must recover data, administrative access, and a failed PC. Employees do not need to work remotely or use secondary devices unless the business separately approves that capability.
 
+### 3.6 Five-pillar validation using the Azure Well-Architected lens
+
+The Azure Well-Architected Framework is used here as a technology-neutral quality lens. Solution 2 is Google-first and does not depend on Azure services, but the five concerns still apply to Google Workspace, GCPW, supplemental endpoint controls, SaaS dependencies, and local Windows endpoints.
+
+| Pillar | Assessment | Controls and evidence required before approval |
+|---|---|---|
+| Reliability | Partial; offline and backup behavior are defined, but outage evidence must be completed | Set the approved RTO/RPO and test first sign-in during an Internet outage, finite offline-validity expiry, password/security-event reauthentication, Google Workspace or backup unavailability, router recovery, device replacement, and local-data restore. Document which work continues offline and do not imply provider-level high availability. |
+| Security | Strong control map; detection and response need explicit evidence | Keep 2-Step Verification, FIDO2/passkeys where practical, separate admin and emergency accounts, domain restriction, BitLocker escrow, AV/EDR, firewall, standard-user controls, and no Internet-exposed administration. Add admin-activity review, lost-device/token-revocation handling, incident triage, and documented recovery from a compromised Google account. |
+| Cost Optimization | Detailed model; supplemental-control economics need ongoing review | Track Google, Office, backup, endpoint-security, RMM, and support costs against the approved monthly ceiling. Review license and device utilization monthly, remove unused controls, and price optional mobility/BYOD separately. Reject a supplemental product when its cost or overlap defeats the Google-first rationale. |
+| Operational Excellence | Good rollout and support process; standard ownership and change evidence must be retained | Name a primary and backup operator, keep the Google Admin/GCPW baseline versioned, pilot policy and application changes, document rollback and device unenrollment, and review Google, endpoint, backup, and firewall service health and alerts. Exercise onboarding, offboarding, incident, restore, and replacement-device runbooks. |
+| Performance Efficiency | Missing an explicit measurement baseline | Measure first GCPW sign-in and subsequent Windows logon time, policy synchronization, MSI/application deployment, Google Drive/Office/Chrome responsiveness, endpoint CPU/memory/disk, and office bandwidth/latency. Test representative concurrent use and simplify policies or add capacity only when measurements justify it. |
+
 ## 4. Logical architecture
 
 ### 4.1 Google Workspace identity and administration
@@ -513,4 +525,5 @@ The design is accepted only when:
 - [Custom settings for Windows 10 or 11 devices](https://knowledge.workspace.google.com/admin/devices/add-edit-or-delete-custom-settings-for-windows-10-or-11-devices)
 - [Install apps on Windows devices with custom settings](https://knowledge.workspace.google.com/admin/devices/install-apps-on-windows-10-or-11-devices-with-custom-settings)
 - [GCPW FIDO2 security-key support](https://workspaceupdates.googleblog.com/2026/07/google-credential-provider-for-windows-now-supports-FIDO2-compliant-physical-security-keys-as-a-second-factor-for-authentication.html)
+- [Azure Well-Architected Framework pillars](https://learn.microsoft.com/en-us/azure/well-architected/pillars)
 - [Windows 10 support lifecycle](https://support.microsoft.com/en-us/windows/deployment/updates-lifecycle/windows-10-support-has-ended-on-october-14-2025)

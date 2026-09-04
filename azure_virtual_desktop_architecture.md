@@ -72,6 +72,18 @@ FSLogix makes a pooled desktop feel persistent by attaching a user profile conta
 
 AVD can make a user less dependent on one physical PC, but the business does not have to enable remote work. If remote or secondary-device access is approved, it must reuse Entra identity, MFA, Conditional Access, logging, and offboarding controls rather than create an unmanaged access path.
 
+### 3.8 Five-pillar validation using the Azure Well-Architected Framework
+
+Solution 3 maps directly to Azure resources and should be reviewed against all five Azure Well-Architected pillars. The controls below restore the measurable targets and evidence needed to balance availability, security, cost, operations, and user experience.
+
+| Pillar | Assessment | Controls and evidence required before approval |
+|---|---|---|
+| Reliability | Strong foundation; recovery boundaries and targets must be explicit | Set RTO/RPO and a dependency/availability matrix for Entra, AVD control-plane services, session hosts, Azure Files/FSLogix, DNS, office Internet, and the selected region. Test host drain/failure, profile/storage restore, network degradation, emergency access, and the documented regional/service-outage response. Do not claim regional high availability unless a second-region design is approved and tested. |
+| Security | Strong baseline; continuous detection and response must be evidenced | Retain Entra MFA/Conditional Access, Azure RBAC, managed identities where applicable, encrypted disks/data, Defender/endpoint controls, no public IP or inbound RDP, least-privilege redirection, and audit logs. Add vulnerability/patch evidence, security-alert triage, lost-device/session revocation, and periodic privileged-access review. |
+| Cost Optimization | Detailed model; resource-level accountability should be added | Apply owner, environment, cost-center, image-version, and shutdown tags; enforce budgets and alerts; use autoscale/scheduled shutdown, right-size from measured concurrency, remove idle resources, and review storage/Log Analytics/backup growth monthly. Validate license eligibility and compare reserved/savings options only after usage is stable. |
+| Operational Excellence | Strong runbooks; repeatable deployment and learning loops need explicit evidence | Keep infrastructure and policy decisions reproducible through approved templates or documented build steps, version the golden image and application packages, use pilot rings and rollback, monitor Azure service health, and record incidents, changes, post-incident actions, and support ownership. Test the full host-pool, profile, image, backup, and cost-shutdown runbooks. |
+| Performance Efficiency | Partial; baseline metrics exist, but targets and load tests are required | Define targets for connection success, logon duration, profile attach, application launch, CPU/memory/disk latency, session density, and user-perceived responsiveness. Load-test expected concurrency, measure WAN latency/jitter/packet loss, validate autoscale response and RDP Shortpath where applicable, and resize or add hosts based on measured demand. |
+
 ## 4. Logical architecture
 
 ### 4.1 Identity and access layer
@@ -672,3 +684,4 @@ If remote work or portability is enabled, also verify approved external-device p
 - [Enable Microsoft Entra Kerberos authentication for Azure Files](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-identity-auth-hybrid-identities-enable)
 - [Configure FSLogix profile containers with Azure Files and Microsoft Entra ID](https://learn.microsoft.com/en-us/fslogix/how-to-configure-profile-container-entra-id-hybrid)
 - [Azure Virtual Desktop multi-region business continuity](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/azure-virtual-desktop/azure-virtual-desktop-multi-region-bcdr)
+- [Azure Well-Architected Framework pillars](https://learn.microsoft.com/en-us/azure/well-architected/pillars)

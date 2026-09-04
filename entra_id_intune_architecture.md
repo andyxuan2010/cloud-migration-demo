@@ -53,6 +53,18 @@ Entra ID should own the workforce user lifecycle for this option. Google Workspa
 
 The business must be able to replace a failed PC, recover data, restore administrative control, and transfer support responsibility. Employees do not need to be permitted to work remotely or use secondary devices unless the business separately approves that capability.
 
+### 3.6 Five-pillar validation using the Azure Well-Architected lens
+
+The Azure Well-Architected Framework is used here as a technology-neutral quality lens. Solution 1 does not deploy Azure compute; the same five concerns still apply to Entra ID, Intune, Google Workspace, SaaS dependencies, and local Windows endpoints.
+
+| Pillar | Assessment | Controls and evidence required before approval |
+|---|---|---|
+| Reliability | Partial; recovery is defined, but service-path continuity must be evidenced | Set the approved RTO/RPO and an outage matrix for Entra, Google federation, Internet, router/firewall, and individual PCs. Test cached sign-in for previously signed-in users, the direct Google recovery/federation-rollback path, router configuration restore, and replacement-PC recovery. Do not claim full high availability without approved redundant connectivity or equipment. |
+| Security | Strong baseline; operational response must be demonstrated | Keep MFA/Conditional Access, separate admin identities, two emergency accounts, BitLocker escrow, Defender/AV, Windows LAPS, standard-user controls, and no Internet-exposed administration. Add evidence for incident triage, lost-device response, token/session revocation, and periodic Entra/Intune/security-log review. |
+| Cost Optimization | Partially explicit | Maintain the licensing and backup cost model, an approved monthly ceiling, monthly license/utilization review, and removal of unused or duplicate services. Price optional mobility/BYOD separately; this baseline has no Azure compute, profile, or network consumption cost. |
+| Operational Excellence | Strong process foundation; ownership and service-health handling must be explicit | Name a primary and backup operator, retain Pilot/Standard/Exception change records, and maintain runbooks for enrollment, policy rollback, incident escalation, offboarding, restore, and device replacement. Review Microsoft, Google, endpoint, backup, and firewall service health and alerts on the agreed schedule. |
+| Performance Efficiency | Missing an explicit measurement baseline | Measure Windows sign-in, Intune enrollment and policy/application deployment, update completion, Google Workspace/Drive/Office responsiveness, endpoint CPU/memory/disk, and office bandwidth/latency. Review trends for the six-to-ten-PC population and add capacity or simplify policies only when measurements show a need. |
+
 ## 4. Logical architecture
 
 ### 4.1 Identity and access layer
@@ -507,4 +519,5 @@ The design is accepted only when:
 - [Windows Autopilot for existing devices](https://learn.microsoft.com/en-us/autopilot/existing-devices)
 - [Microsoft Entra SSO for Google Workspace](https://learn.microsoft.com/en-us/entra/identity/saas-apps/google-apps-tutorial)
 - [Microsoft Entra provisioning for Google Workspace](https://learn.microsoft.com/en-us/entra/identity/saas-apps/g-suite-provisioning-tutorial)
+- [Azure Well-Architected Framework pillars](https://learn.microsoft.com/en-us/azure/well-architected/pillars)
 - [Windows 10 support lifecycle](https://support.microsoft.com/en-us/windows/deployment/updates-lifecycle/windows-10-support-has-ended-on-october-14-2025)
