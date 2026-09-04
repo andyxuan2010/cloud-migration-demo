@@ -2,7 +2,7 @@
 
 ## Detailed architecture design, analysis, and comparison
 
-**Design scope:** 10 Windows PCs, six initial users, currently joined to on-premises AD DS, Google Workspace as the primary SaaS platform, Microsoft Office, communication tools, and retirement of the local domain controller.
+**Design scope:** 10 Windows PCs, six initial users, currently joined to on-premises AD DS, Google Workspace as the selected/retained SaaS platform when used, Microsoft Office, communication tools, and retirement of the local domain controller.
 
 **Document relationship:** The authoritative baseline is [`requirements.md`](requirements.md). Remote work and user/device portability are optional; identity security, endpoint recovery, data ownership, application continuity, and AD dependency removal remain mandatory.
 
@@ -24,6 +24,7 @@ If the business mainly needs to remove AD DS while retaining 10 capable PCs, Ent
 The preferred AVD target is:
 
 - Microsoft Entra ID as the authoritative cloud identity;
+- six Microsoft 365 Business Premium with Teams licenses as the baseline user subscription for AVD, including Entra ID P1-level controls, Intune Plan 1, Office, Teams, and Defender for Business;
 - Entra-joined Windows 11 Enterprise multi-session session hosts;
 - a pooled host pool, normally with one host for a pilot and two or more hosts for production availability;
 - one AVD workspace and desktop application group for the initial user population;
@@ -31,10 +32,12 @@ The preferred AVD target is:
 - FSLogix profile containers on Azure Files using the supported Microsoft Entra Kerberos cloud-only identity path, subject to a pilot validation of permissions, region, and application behavior;
 - Azure autoscale, budgets, alerts, monitoring, and a documented image replacement process;
 - office firewall egress to Microsoft and Google cloud services, with no inbound RDP and no public IP addresses on session hosts;
-- Intune and Defender for Cloud/Endpoint controls where the selected licenses and operating model justify them; and
+- Intune and Defender for Business controls where the baseline license and operating model justify them; Defender for Cloud and other server-security services remain optional add-ons; and
 - optional remote access only after the business approves the mobility scope, device policy, and incremental cost.
 
 Microsoft documents that Entra-joined session hosts can remove the need for line-of-sight to an on-premises domain controller or Entra Domain Services. AVD also uses reverse-connect transport, so the normal design does not expose an inbound RDP listener. The exact license entitlement, Azure Files authentication model, and profile behavior must still be validated before production approval.
+
+The Microsoft 365 Business Premium with Teams subscription is the commercial baseline for this solution, not an additive purchase on top of standalone Intune Plan 1 or Entra ID P1. Google Workspace remains an optional/retained collaboration platform and its license fee is excluded from the cost calculation. AVD Azure resources, independent backup, Copilot, Intune Plan 2/Suite, Entra ID P2, and other Azure security or monitoring services remain separately priced.
 
 ## 2. Architecture diagram
 
@@ -102,7 +105,22 @@ Recommended controls:
 - company-controlled tenant ownership, billing, recovery methods, and DNS registrations; and
 - a documented joiner/mover/leaver process that revokes AVD, Google, Office, and other SaaS access together.
 
-AVD authentication and Windows session-host authentication should use the same Entra identity. Local-only Windows accounts are not a supported identity solution for AVD user sessions. If a third-party identity provider is retained, it must federate with Entra and pass the AVD authentication and Conditional Access pilot.
+AVD authentication and Windows session-host authentication should use the same Entra identity. Assign the approved Business Premium with Teams license to every internal AVD user and do not add standalone Intune Plan 1 or Entra ID P1 licenses on top of it. Local-only Windows accounts are not a supported identity solution for AVD user sessions. If a third-party identity provider is retained, it must federate with Entra and pass the AVD authentication and Conditional Access pilot.
+
+#### User sign-in and authentication workflow
+
+![Solution 3 user sign-in and authentication workflow](images/avd_entra_authentication_workflow.svg)
+
+The workflow has a terminal authentication path followed by AVD brokering and hosted-profile attachment:
+
+1. The user signs in to the Windows access terminal with the approved local terminal method and launches Windows App or the supported Remote Desktop client.
+2. The client sends the user to Microsoft Entra ID. Entra validates the identity, MFA, Conditional Access, and the user’s eligible AVD license, then returns an access token.
+3. The client presents the token to the AVD service and requests the assigned workspace and desktop application group.
+4. AVD validates the group assignment, selects an available session host, and establishes the brokered reverse-connect session without exposing inbound Internet RDP.
+5. The session host validates the session identity and attaches the user’s FSLogix profile container from Azure Files using the approved authentication and permissions model.
+6. The hosted Windows session opens with Office, Chrome, Google Workspace when retained, communication tools, and approved applications. Intune and Defender controls manage the selected devices/hosts but do not replace Entra authentication or the AVD broker.
+
+The Azure subscription and Entra tenant provide the resource, identity, RBAC, budget, and recovery boundary. If Google Workspace is retained, its browser session is established after the hosted Windows session starts; its license fee is excluded from the cost calculation but its entitlement remains required.
 
 ### 4.2 AVD resource hierarchy
 
@@ -110,7 +128,7 @@ Use a small, clearly named Azure resource structure:
 
 | Scope | Example design | Purpose |
 |---|---|---|
-| Subscription | Existing controlled production subscription or dedicated small-business subscription | Billing, quotas, policy, support ownership |
+| Subscription | One company-owned Azure subscription associated with the production Entra tenant | Billing, quotas, policy, support ownership, and AVD resource boundary |
 | Resource group | `rg-avd-prod-ca` | AVD, host-pool, workspace, diagnostics and dependent resources |
 | Host pool | `hp-avd-pooled-prod` | Pooled session hosts and load-balancing policy |
 | Workspace | `ws-avd-prod` | User-facing AVD workspace |
@@ -120,6 +138,8 @@ Use a small, clearly named Azure resource structure:
 | Monitoring resource group | Existing shared or dedicated Log Analytics scope | Diagnostics, alerts and operational evidence |
 
 Use tags for owner, environment, cost center, data classification, image version, support contact, and shutdown schedule. Keep the first deployment in one Azure region selected for user latency, data residency, and service availability. Multi-region AVD is a separate project and is not part of the lightweight baseline.
+
+The Azure subscription and Microsoft Entra tenant are required foundation components for AVD. Before resource deployment, verify tenant ownership, corporate domain, billing owner, subscription association, RBAC, budgets, activity logging, policy, support contacts, and recovery contacts. Keep any additional Azure service outside the approved AVD scope until it has a resource-level estimate and owner.
 
 ### 4.3 Workspace, application group, and host pool
 
@@ -175,7 +195,7 @@ Business documents should remain in Google Shared drives or other approved SaaS 
 
 ### 4.6 Google Workspace integration
 
-Google Workspace remains the primary collaboration platform. In the AVD session, users use Chrome, Gmail, Drive, Docs, shared drives, and approved SaaS applications.
+When retained, Google Workspace remains the primary collaboration platform. In the AVD session, users use Chrome, Gmail, Drive, Docs, shared drives, and approved SaaS applications.
 
 Recommended Google design:
 
@@ -191,7 +211,7 @@ If Google is the authoritative identity for the wider business, federation or li
 
 ### 4.7 Office and other applications
 
-Office applications run in the session-host image rather than on the terminal by default. Confirm that each license permits use in a shared Windows multi-session environment. Microsoft Office and Google Workspace are complementary in this design: Office supports local document workflows, while Google Workspace remains the SaaS and collaboration system.
+Office applications run in the session-host image rather than on the terminal by default. Confirm that the baseline Business Premium license permits use in a shared Windows multi-session environment. Microsoft Office and Google Workspace are complementary in this design: Office supports local document workflows, while Google Workspace remains the SaaS and collaboration system when retained.
 
 For every other application, record:
 
@@ -246,9 +266,29 @@ Operate AVD through a small set of repeatable controls:
 
 Azure Backup protects selected Azure resources; it does not automatically prove that a user can work after a full host-pool or identity failure. Document the recovery sequence and test it.
 
+### 4.10 Optional business value-adds
+
+These capabilities are not required for the basic AVD design and are excluded from the **58–104 hour** implementation estimate and the baseline cost model. Approve each only with an owner, measurable outcome, data boundary, recurring-cost ceiling, and rollback or retirement criterion.
+
+| Optional capability | Small-business value | Planning treatment |
+|---|---|---|
+| Windows Autopilot for access terminals | Speeds replacement or reprovisioning of the office PCs used to access AVD | Optional Intune-based terminal lifecycle capability; allow **4–8 hours** for registration, profile, application, and replacement testing. |
+| SharePoint/Teams operating hub | Centralizes procedures, templates, forms, onboarding material, and Microsoft-owned content | Uses baseline Microsoft 365 services where appropriate; allow **6–12 hours**. Do not duplicate Google Shared drives without a content-ownership decision. |
+| Power Automate standard workflows | Automates approvals, onboarding/offboarding tasks, reminders, and support or backup exceptions | Allow **2–4 hours per lightweight workflow**. Premium/custom connectors, gateways, RPA, and AI Builder require separate licensing review. |
+| Microsoft 365 Copilot Chat | Web research, drafting, summarization, and general employee assistance | Eligible Business Premium users can use web-based Copilot Chat without an additional Copilot license; allow **2–4 hours** for safe-use guidance and a pilot. |
+| Microsoft 365 Copilot pilot | Work-grounded assistance across Microsoft 365 email, documents, Teams, and meetings | Requires a separate per-user add-on; pilot with one or two users after reviewing permissions; allow **4–8 hours**, excluding license fees. It does not automatically ground on Google Workspace data. |
+| Copilot Studio internal FAQ agent | Internal IT, HR, operating-procedure, or customer-service answers | Requires separate agent licensing, Copilot Credits, or usage-based billing; allow **8–16 hours** plus content-owner time and ongoing maintenance. |
+| Mobile application management | Controlled access from approved mobile/BYOD devices | Optional Intune-based capability; allow **4–8 hours** for policy, Conditional Access, privacy, and revocation testing. |
+| Azure VM jumpbox or temporary remote server | Controlled administrative or migration access to the Azure environment | Optional only; use private networking and Bastion/VPN, Entra/MFA/RBAC, budgets, automatic shutdown, and an expiry date; allow **6–12 hours** plus Azure consumption. |
+| Azure Arc for retained on-premises hosts | Central inventory, management, and patch visibility while a server remains | Optional; use only for approved retained hosts. Add Arc/Update Manager/Monitor or Defender charges as applicable and protect Tier 0 systems carefully. |
+
+Defer a custom Azure AI application, Microsoft Sentinel, Azure Firewall, Entra ID P2/governance features, and additional AVD regions until a specific business, regulatory, or revenue case justifies their cost and operational complexity.
+
 ## 5. User and administrator flows
 
 ### 5.1 Normal office sign-in
+
+See the detailed [user sign-in and authentication workflow](#user-sign-in-and-authentication-workflow) in section 4.1. The operational sequence is:
 
 1. The user signs in to the Windows access terminal with a standard local device account or an approved terminal sign-in method.
 2. The user launches Windows App or the supported Remote Desktop client.
@@ -363,7 +403,7 @@ The final gate requires a current dependency inventory, exports of required AD i
 
 ### Time estimate
 
-The following is a planning estimate for six initial users, up to 10 access terminals, and a basic AVD deployment. **Effort** is hands-on implementation labor; **elapsed time** includes Azure subscription and licensing decisions, quota/vendor dependencies, user acceptance, migration batches, change windows, and stabilization. The phase totals align with the **58–104 hour** basic implementation range in section 10.
+The following is a planning estimate for six initial users, up to 10 access terminals, and a basic AVD deployment. **Effort** is hands-on implementation labor; **elapsed time** includes Azure subscription and licensing decisions, quota/vendor dependencies, user acceptance, migration batches, change windows, and stabilization. Phase 1 and Phase 2 include the company-owned Azure subscription foundation and assignment/validation of the Microsoft 365 Business Premium with Teams baseline. Optional value-adds remain excluded. The phase totals align with the **58–104 hour** basic implementation range in section 10.
 
 | Phase | Effort | Indicative elapsed time |
 |---|---:|---:|
@@ -392,7 +432,8 @@ The elapsed range assumes one implementation owner working part time and does no
 
 ### Phase 1 — Azure foundation and governance
 
-- select subscription, region, resource groups, naming, tags, and owners;
+- create or associate one company-owned Azure subscription with the production Microsoft Entra tenant; confirm tenant, domain, billing, ownership, and recovery contacts;
+- select region, resource groups, naming, tags, and owners;
 - configure budgets, alerts, RBAC, policy, diagnostic settings, and support contacts;
 - define VNet, subnet, NSG, DNS, egress, and private-endpoint decisions;
 - confirm Azure quotas and eligible AVD licensing; and
@@ -402,7 +443,9 @@ The elapsed range assumes one implementation owner working part time and does no
 
 - confirm Entra tenant ownership and verified domain;
 - create groups, privileged accounts, emergency accounts, and MFA/Conditional Access policies;
-- assign only the licenses required for the pilot;
+- purchase and assign six Microsoft 365 Business Premium with Teams licenses as the baseline AVD user entitlement;
+- do not add standalone Intune Plan 1 or Entra ID P1 licenses on top of Business Premium; document any separately approved license exception;
+- validate that each AVD user has an eligible Windows/AVD entitlement and that Office shared-computer activation rights are covered;
 - configure AVD authentication and optional SSO; and
 - map the Google Workspace identity lifecycle and offboarding process.
 
@@ -461,6 +504,37 @@ The elapsed range assumes one implementation owner working part time and does no
 - stop and decommission the AD DS server only after business-owner approval; and
 - securely retire, repurpose, or dispose of the old server and credentials.
 
+### Optional value-add work packages
+
+The work below is separate from the **58–104 hour** basic AVD implementation:
+
+- **Windows Autopilot for access terminals:** **4–8 additional hours**;
+- **SharePoint/Teams operating hub:** **6–12 additional hours**;
+- **Power Automate standard workflow:** **2–4 additional hours per workflow**;
+- **Copilot Chat enablement:** **2–4 additional hours**;
+- **Microsoft 365 Copilot pilot:** **4–8 additional hours**, excluding license fees;
+- **Copilot Studio FAQ agent:** **8–16 additional hours**, excluding usage or license fees;
+- **Mobile application management:** **4–8 additional hours**; and
+- **Azure VM jumpbox/temporary remote server:** **6–12 additional hours**, excluding Azure consumption; and
+- **Azure Arc/retained-host management:** **4–8 additional hours** for one to three simple hosts, excluding any service consumption charges.
+
+Complex data integration, regulated content, custom AI, multiple regions, private networking, or advanced security monitoring requires a separate estimate.
+
+### Implementation deliverables and completed end state
+
+After the AVD rollout and stabilization period, the approved implementation will deliver:
+
+| Deliverable | Completed outcome |
+|---|---|
+| Microsoft cloud foundation | Company-owned Microsoft Entra tenant, verified domain, Azure subscription association, ownership/billing, RBAC, budgets, alerts, policies, and recovery contacts |
+| Licensed AVD user platform | Six Microsoft 365 Business Premium with Teams licenses assigned to AVD users, with eligible Windows/AVD rights, Entra controls, Intune Plan 1, Office, Teams, and Defender capabilities validated |
+| AVD service | Documented workspace, desktop application group, pooled host pool, Entra-joined session hosts, golden image, application set, autoscale, diagnostics, monitoring, and cost controls |
+| Profile and data protection | Azure Files/FSLogix configuration, Google Shared drive ownership, Azure resource backup, independent SaaS backup, restore evidence, RPO/RTO, and recovery runbooks |
+| Managed access terminals | Up to 10 supported Windows terminals patched, encrypted, protected, inventoried, restricted for redirection, and documented for replacement |
+| AD DS retirement | DNS/DHCP and other dependencies transferred or remediated; domain controller demoted and retired after acceptance of the dependency gate |
+| Optional value-adds, if approved | Autopilot terminal profile, SharePoint/Teams hub, workflows, Copilot guidance/pilot, FAQ agent, MAM, or Arc-enabled retained hosts with owners, costs, controls, and acceptance evidence |
+| Handover package | Architecture, image/application register, policy/configuration register, migration ledger, recovery and support runbooks, cost/license register, rollback evidence, and business acceptance sign-off |
+
 ## 9. Operating model
 
 ### Routine operations
@@ -510,27 +584,43 @@ Prices below are Canadian list-price planning assumptions checked on **2026-09-0
 
 | Required item | Current planning price | Six-user planning cost | Scope and notes |
 |---|---:|---:|---|
-| Microsoft 365 Business Premium with Teams | **CAD 29.80/user/month**, annual commitment | **CAD 178.80/month** or **CAD 2,145.60/year** | Recommended AVD user-license baseline; includes Entra ID, Intune, Office, and Defender for Business. Copilot is excluded. Confirm the purchased SKU is assigned to each AVD user. |
+| Microsoft 365 Business Premium with Teams *(baseline)* | **CAD 29.80/user/month**, annual commitment | **CAD 178.80/month** or **CAD 2,145.60/year** | Baseline AVD user subscription; includes Entra ID P1-level controls, Intune Plan 1, Office, Teams, and Defender for Business. Copilot is excluded. Confirm the purchased SKU is assigned to each AVD user. |
 | Microsoft 365 Business Premium without Teams | **CAD 25.50/user/month**, annual commitment | **CAD 153.00/month** or **CAD 1,836.00/year** | Use only if Teams is not required and the no-Teams SKU meets the AVD, Office, security, and collaboration requirements. |
-| Google Workspace Business Plus | **CAD 28.70/user/month** annual commitment; **CAD 34.40** flexible billing | **CAD 172.20/month** annual plan or **CAD 206.40/month** flexible | Retained for Gmail, Drive, Docs, Shared drives, and collaboration inside the hosted desktop. |
+| Optional Google Workspace edition | **Optional; price excluded** | **CAD 0 included cost** | Retained for Gmail, Drive, Docs, Shared drives, and collaboration inside the hosted desktop when selected. The required edition and entitlement must still be verified. |
 | Azure subscription | **No fixed subscription fee; pay-as-you-go for Azure resources** | **CAD 0 fixed** | Required company-owned Azure management and billing boundary. AVD compute, disks, Azure Files, networking, monitoring, autoscale, and backup are consumption charges. |
-| Independent Google Workspace and endpoint backup | **CAD 50–100/month planning allowance** | **CAD 50–100/month** | Vendor quote required; Google Drive synchronization is not a backup. |
+| Independent SaaS/endpoint backup | **CAD 50–100/month planning allowance** | **CAD 50–100/month** | Vendor quote required; Google Drive synchronization is not a backup. |
 
 Microsoft documents Microsoft 365 Business Premium as an eligible internal-user license for Windows 11 Enterprise multi-session Azure Virtual Desktop. Every internal user who accesses AVD must have an eligible license assigned. Entra ID Free alone is not enough for the target Conditional Access and automatic-enrollment controls, while standalone Intune Plan 1 plus Entra ID P1 should not be treated as an AVD Windows entitlement; if Business Premium is not selected, choose another license explicitly listed as eligible for AVD and validate Office/shared-computer rights separately.
 
 Intune Plan 1 is **CAD 10.90/user/month** when purchased standalone with annual billing; Plan 2 is an optional **CAD 5.40/user/month** add-on, and Intune Suite is an optional **CAD 13.60/user/month** add-on. These add-ons are not included in the baseline AVD estimate. Do not purchase standalone Entra ID P1 or Intune Plan 1 on top of Business Premium unless a reseller confirms a specific uncovered requirement.
 
+### Microsoft 365 Business Premium included services
+
+In addition to Entra ID P1-level controls and Intune Plan 1, the baseline Microsoft 365 Business Premium with Teams subscription includes:
+
+- Office desktop, web, and mobile applications;
+- Exchange Online business email and calendar;
+- Teams chat, meetings, and collaboration;
+- SharePoint team sites and document collaboration;
+- OneDrive for Business storage;
+- Microsoft Defender for Business;
+- Microsoft Defender for Office 365 Plan 1;
+- Microsoft Purview information protection and DLP capabilities; and
+- related services such as Planner, Forms, Lists, Bookings, Loop, Clipchamp, and To Do.
+
+Copilot, Teams Phone/PSTN, Entra ID P2, Intune Plan 2/Suite, Azure consumption, Google Workspace, and independent backup are not included in the baseline license price. Entra ID Free is an optional reduced-control alternative, but it lacks custom Conditional Access and device-compliance gates, some self-service password-reset/writeback and enrollment paths, dynamic groups, and advanced risk/governance capabilities; it is not the recommended AVD profile.
+
 ### License-only recurring baseline
 
 | Profile | Monthly estimate | Annual estimate | Assumptions |
 |---|---:|---:|---|
-| Business Premium with Teams + Google annual plan + backup | **CAD 401–451/month** | **CAD 4,812–5,412/year** | Six users; excludes AVD Azure resource consumption. |
-| Business Premium without Teams + Google annual plan + backup | **CAD 375–425/month** | **CAD 4,502–5,102/year** | Six users; excludes AVD Azure resource consumption. |
-| Flexible Google billing adjustment | **Add CAD 34.20/month** | **Add CAD 410.40/year** | Applies to either Microsoft 365 profile when Google is billed flexibly instead of annually. |
+| Business Premium with Teams + backup | **CAD 228.80–278.80/month** | **CAD 2,745.60–3,345.60/year** | Six users; Google Workspace is optional and excluded; excludes AVD Azure resource consumption. |
+| Business Premium without Teams + backup | **CAD 203.00–253.00/month** | **CAD 2,436.00–3,036.00/year** | Six users; Google Workspace is optional and excluded; excludes AVD Azure resource consumption. |
+| Optional Google Workspace license | **CAD 0 included cost** | **CAD 0 included cost** | Required if the selected design retains Google Workspace; add the actual fee if it is not already funded. |
 
-The Azure subscription itself is not a monthly license line. AVD resources generate consumption charges even when no additional Azure subscription fee applies. Use the Azure Pricing Calculator after the concurrency pilot to estimate the selected host size/count, disk tier, Azure Files profile storage, backup, Log Analytics, network, and autoscale schedule. The gross AVD operating ranges below already include the license-only baseline, backup, and estimated Azure consumption; do not add the license-only table a second time.
+The Azure subscription itself is not a monthly license line. AVD resources generate consumption charges even when no additional Azure subscription fee applies. Use the Azure Pricing Calculator after the concurrency pilot to estimate the selected host size/count, disk tier, Azure Files profile storage, backup, Log Analytics, network, and autoscale schedule. The gross AVD operating ranges below include the revised license-only baseline, backup, and estimated Azure consumption; do not add the license-only table a second time.
 
-Google Workspace remains a separate subscription and is not replaced by AVD. AVD does not eliminate Google Workspace backup, domain ownership, or application licensing.
+Google Workspace remains an optional/retained separate subscription and is not replaced by AVD. If selected, it remains required for Gmail, Drive, Docs, shared drives, and related workflows, but its license fee is excluded from this comparison calculation. AVD does not eliminate Google Workspace backup, domain ownership, or application licensing.
 
 ### Capacity profiles
 
@@ -579,9 +669,18 @@ For a comparable six-user planning model, use Canadian dollars before tax and an
 | Cost category | Standard planning amount |
 |---|---:|
 | One-time deployment | **CAD 7,250–15,600** for the documented 58–104 hour basic scope. A low-concurrency pilot may fit within **CAD 6,000–10,800** for 48–72 hours. |
-| Recurring operational cost | **CAD 980–1,850/month** gross for two right-sized session hosts, Microsoft 365 Business Premium without Copilot, retained Google Workspace Business Plus, and backup. A one-host pilot is approximately **CAD 680–1,150/month**, but retains the host single point of failure. |
+| Recurring operational cost | **CAD 808–1,678/month** gross for two right-sized session hosts, Microsoft 365 Business Premium with Teams without Copilot, optional Google Workspace excluded from the calculation, and backup. A one-host pilot is approximately **CAD 508–978/month**, but retains the host single point of failure. |
 | Routine maintenance | **CAD 750–1,800/month** for approximately 6–12 hours of image, host-pool, FSLogix/profile, autoscale, monitoring, patch, release, backup, and recovery administration. A one-host pilot may require approximately 4–8 hours/month, or approximately **CAD 500–1,200/month**. |
-| Excluded or optional items | Hardware replacement, Internet service, optional dual-WAN/5G or UPS, private endpoints, higher regional availability, major application work, incident response, and vendor support contracts. |
+| Excluded or optional items | Google Workspace license fee, Copilot, Intune Plan 2/Suite, Entra ID P2, Azure Arc, private endpoints, higher regional availability, hardware replacement, Internet service, optional dual-WAN/5G or UPS, major application work, incident response, and vendor support contracts. |
+
+### Optional Azure add-on cost treatment
+
+| Optional add-on | Cost treatment and planning rule |
+|---|---|
+| Azure VM jumpbox or temporary remote server | No fixed license line; add VM compute, disks, network, Bastion/VPN, backup, monitoring, and log-ingestion consumption. Use automatic shutdown and remove the resources when the approved temporary purpose ends. |
+| Azure Arc-enabled on-premises hosts | Basic Arc connection and Azure resource organization are generally offered at no additional charge; Update Manager, Monitor, Defender, Sentinel, guest configuration, Windows Server pay-as-you-go, log ingestion, and storage may add per-server or consumption charges. |
+
+These add-ons are excluded from the AVD operating ranges and the **58–104 hour** basic implementation estimate. Price them separately with their security controls, owner, budget, and exit criteria.
 
 ## 11. Analysis and comparison with the other options
 
@@ -647,6 +746,10 @@ Otherwise, use Solution 1 as the default target and keep Solution 2 as the Googl
 | Terminal is compromised | Session/data exposure | Patch/encrypt/lock down terminals, require MFA, limit redirection, revoke lost-device sessions |
 | Profile or backup is treated as the data source | Recovery or exit failure | Keep Google Shared drives authoritative; maintain separate Azure and SaaS backups |
 | AVD skills are unavailable | Slow or expensive support | Use concise runbooks, monitoring, managed support, and transfer-ready documentation |
+| Microsoft 365 user license is missing or not AVD-eligible | Access failure, noncompliance, or unexpected cost | Assign Business Premium with Teams to every AVD user, verify Windows/AVD and Office shared-computer rights, and validate any exception before production |
+| Google Workspace license assumption is misunderstood | Google access or collaboration failure | Treat Google Workspace as optional/retained, exclude its fee only from the planning calculation, and verify entitlement if the design uses Gmail, Drive, Docs, or shared drives |
+| Copilot or chatbot exposes overshared or inaccurate information | Confidentiality risk, incorrect advice, or loss of trust | Review Microsoft 365/SharePoint permissions, use curated sources, require human review, and define an owner and escalation path |
+| Optional add-ons expand AVD complexity | Cost and support burden increase | Approve each add-on separately with a use case, owner, budget, acceptance test, and retirement criterion |
 
 ## 13. Acceptance criteria
 
@@ -655,6 +758,7 @@ The option is accepted only when the following tests pass or a named business ow
 ### Identity and access
 
 - all pilot users authenticate to AVD with the authoritative Entra identity;
+- six Microsoft 365 Business Premium with Teams licenses are assigned to the approved AVD users, and their Windows/AVD and Office entitlements are validated;
 - MFA and Conditional Access behave as designed;
 - privileged and emergency access are tested without relying on one employee;
 - user provisioning and termination revoke AVD, Google, Office, and other SaaS access;
@@ -682,12 +786,15 @@ The option is accepted only when the following tests pass or a named business ow
 
 ### Recovery, operations, and cost
 
+- the company-owned Azure subscription is associated with the production Entra tenant and has billing ownership, RBAC, budgets, alerts, policy, and activity-log controls tested;
 - Azure Files/profile, session-host image, Google Workspace, and administrative restore tests pass;
 - autoscale, drain mode, maintenance, and rollback procedures are documented and exercised;
 - budgets and cost alerts fire at the approved thresholds;
 - the support runbook can distinguish identity, client, host, profile, application, network, and Azure service faults;
 - the three-year cost model and monthly ceiling are approved; and
 - the complete AD DS dependency-removal gate is signed off before decommissioning.
+
+If optional SharePoint/Teams, workflows, Copilot, FAQ-agent, MAM, Arc, or other Azure services are enabled, their owner, cost boundary, security controls, support procedure, and acceptance evidence must also be approved.
 
 ### Optional mobility
 
@@ -696,17 +803,19 @@ If remote work or portability is enabled, also verify approved external-device p
 ## 14. Decisions required before implementation
 
 1. Is centralized Windows desktop delivery a confirmed business requirement, or is the objective only AD retirement?
-2. Which Azure region and subscription will own the service?
-3. What user concurrency, application mix, and performance target determine session-host sizing?
-4. Is a pooled host pool acceptable, and is one-host risk acceptable for pilot or production?
-5. Which applications and peripherals must run inside the hosted session?
-6. Will Google Workspace be browser-first, or is Google Drive for desktop required in the multi-session image?
-7. Does the selected Azure Files/Entra Kerberos/FSLogix path pass the cloud-only pilot?
-8. Which Microsoft, Windows, AVD, Office, Google, and third-party licenses are already owned and eligible?
-9. Will session hosts and terminals be enrolled in Intune, and what additional security tool is required?
-10. What monthly operating-cost ceiling, RTO, RPO, and support arrangement are approved?
-11. Is optional remote work or user/device portability enabled now, deferred, or limited to managed devices?
-12. Which AD DS dependencies remain, and who owns each remediation or exception?
+2. Which company-owned Azure subscription, tenant association, billing owner, and region will own the service?
+3. Are six Microsoft 365 Business Premium with Teams licenses approved as the AVD baseline, and which users require them?
+4. What user concurrency, application mix, and performance target determine session-host sizing?
+5. Is a pooled host pool acceptable, and is one-host risk acceptable for pilot or production?
+6. Which applications and peripherals must run inside the hosted session?
+7. Will Google Workspace be browser-first, or is Google Drive for desktop required in the multi-session image?
+8. Does the selected Azure Files/Entra Kerberos/FSLogix path pass the cloud-only pilot?
+9. Which Microsoft, Windows, AVD, Office, Google, and third-party licenses are already owned and eligible?
+10. Will session hosts and terminals be enrolled in Intune, and what additional security tool is required?
+11. What monthly operating-cost ceiling, RTO, RPO, and support arrangement are approved?
+12. Is optional remote work or user/device portability enabled now, deferred, or limited to managed devices?
+13. Which optional business value-adds, if any, will be approved, and who owns their data, cost, and support?
+14. Which AD DS dependencies remain, and who owns each remediation or exception?
 
 ## 15. References
 
@@ -714,11 +823,21 @@ If remote work or portability is enabled, also verify approved external-device p
 - [Microsoft Intune plans and pricing in Canada](https://www.microsoft.com/en-ca/security/business/microsoft-intune-pricing)
 - [Microsoft Intune licensing](https://learn.microsoft.com/en-us/intune/fundamentals/licensing)
 - [Microsoft Entra licensing](https://learn.microsoft.com/en-us/entra/fundamentals/licensing)
+- [Azure subscription and Microsoft Entra tenant relationship](https://learn.microsoft.com/en-us/entra/fundamentals/how-subscriptions-associated-directory)
+- [Microsoft 365 Copilot Chat requirements](https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-chat-requirements)
+- [Microsoft Copilot licensing options](https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-licensing)
+- [Power Automate licensing](https://learn.microsoft.com/en-us/power-platform/admin/power-automate-licensing/types)
+- [Copilot Studio billing and consumption](https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-messages-management)
+- [Microsoft Defender for Business overview](https://learn.microsoft.com/en-us/defender-business/mdb-overview)
 - [Google Workspace pricing in Canada](https://workspace.google.com/intl/en_ca/business/)
 - [Azure Virtual Desktop licensing](https://learn.microsoft.com/en-us/azure/virtual-desktop/licensing)
 - [Understand and estimate Azure Virtual Desktop costs](https://learn.microsoft.com/en-us/azure/virtual-desktop/understand-estimate-costs)
 - [Azure Pricing Calculator](https://azure.microsoft.com/en-ca/pricing/calculator/)
 - [Azure Virtual Desktop prerequisites](https://learn.microsoft.com/en-us/azure/virtual-desktop/prerequisites)
+- [Azure Bastion documentation](https://learn.microsoft.com/en-us/azure/bastion/)
+- [Azure Arc-enabled servers overview](https://learn.microsoft.com/en-us/azure/azure-arc/servers/overview)
+- [Azure Update Manager overview](https://learn.microsoft.com/en-us/azure/update-manager/overview)
+- [Azure Arc pricing](https://azure.microsoft.com/en-us/pricing/details/azure-arc/core-control-plane/)
 - [Deploy Azure Virtual Desktop](https://learn.microsoft.com/en-us/azure/virtual-desktop/deploy-azure-virtual-desktop)
 - [Azure-joined session hosts](https://learn.microsoft.com/en-us/azure/virtual-desktop/azure-ad-joined-session-hosts)
 - [Azure Virtual Desktop authentication](https://learn.microsoft.com/en-us/azure/virtual-desktop/authentication)

@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1170" viewBox="0 0 1800 1170" role="img" aria-labelledby="title desc">
+  <title id="title">Solution 2 user sign-in and authentication workflow</title>
+  <desc id="desc">Sequence diagram showing Google Credential Provider for Windows authenticating a user with Google Workspace, creating a Windows session, and optionally enrolling the device into Google Windows device management.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-amber" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#c58b08"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#17395f" flood-opacity="0.15"/>
+    </filter>
+    <style>
+      .title { font: 700 42px Arial, sans-serif; fill: #17395f; }
+      .subtitle { font: 21px Arial, sans-serif; fill: #60738c; }
+      .lane-title { font: 700 22px Arial, sans-serif; fill: #ffffff; }
+      .card-title { font: 700 27px Arial, sans-serif; fill: #17395f; }
+      .body { font: 18px Arial, sans-serif; fill: #25364d; }
+      .step { font: 700 17px Arial, sans-serif; fill: #17395f; }
+      .flow-label { font: 16px Arial, sans-serif; fill: #60738c; }
+      .note-title { font: 700 20px Arial, sans-serif; fill: #17395f; }
+      .note-body { font: 17px Arial, sans-serif; fill: #25364d; }
+      .footer { font: 15px Arial, sans-serif; fill: #60738c; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1170" fill="#f7fafc"/>
+  <text x="60" y="58" class="title">Solution 2 — User sign-in and authentication workflow</text>
+  <text x="60" y="94" class="subtitle">Google Workspace is authoritative; GCPW authenticates Windows and Google Admin manages the device</text>
+
+  <rect x="45" y="135" width="430" height="825" rx="16" fill="#eef5ff" stroke="#2563eb" stroke-width="3"/>
+  <rect x="515" y="135" width="570" height="825" rx="16" fill="#edf9f5" stroke="#0f766e" stroke-width="3"/>
+  <rect x="1125" y="135" width="630" height="825" rx="16" fill="#fff6e9" stroke="#c25b06" stroke-width="3"/>
+
+  <rect x="68" y="153" width="245" height="42" rx="16" fill="#2563eb"/>
+  <text x="190" y="181" text-anchor="middle" class="lane-title">USER / DEVICE</text>
+  <rect x="538" y="153" width="250" height="42" rx="16" fill="#0f766e"/>
+  <text x="663" y="181" text-anchor="middle" class="lane-title">IDENTITY PROVIDER</text>
+  <rect x="1148" y="153" width="330" height="42" rx="16" fill="#c25b06"/>
+  <text x="1313" y="181" text-anchor="middle" class="lane-title">DEVICE MANAGEMENT</text>
+
+  <rect x="72" y="220" width="376" height="130" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="2" filter="url(#shadow)"/>
+  <text x="94" y="254" class="card-title">User + Windows PC</text>
+  <text x="94" y="284" class="body">Windows 11 Pro • Chrome</text>
+  <text x="94" y="311" class="body">GCPW installed • corporate domain</text>
+  <text x="94" y="338" class="body">Assigned corporate device</text>
+
+  <rect x="542" y="220" width="516" height="130" rx="12" fill="#ffffff" stroke="#0f766e" stroke-width="2" filter="url(#shadow)"/>
+  <text x="566" y="254" class="card-title">Google Workspace</text>
+  <text x="566" y="284" class="body">Authoritative directory and sign-in service</text>
+  <text x="566" y="311" class="body">Account policy • 2-Step Verification</text>
+  <text x="566" y="338" class="body">Authentication result • offline validity</text>
+
+  <rect x="1152" y="220" width="576" height="130" rx="12" fill="#ffffff" stroke="#c25b06" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1176" y="254" class="card-title">Google Admin / Windows management</text>
+  <text x="1176" y="284" class="body">Enrollment token • organizational units</text>
+  <text x="1176" y="311" class="body">Supported Windows policies and applications</text>
+  <text x="1176" y="338" class="body">Inventory • device actions • reporting</text>
+
+  <line x1="270" y1="350" x2="270" y2="925" stroke="#8ca4bd" stroke-width="2" stroke-dasharray="7 8"/>
+  <line x1="800" y1="350" x2="800" y2="925" stroke="#8ca4bd" stroke-width="2" stroke-dasharray="7 8"/>
+  <line x1="1440" y1="350" x2="1440" y2="925" stroke="#8ca4bd" stroke-width="2" stroke-dasharray="7 8"/>
+
+  <rect x="246" y="355" width="48" height="24" rx="12" fill="#2563eb"/>
+  <rect x="776" y="355" width="48" height="24" rx="12" fill="#0f766e"/>
+  <rect x="1416" y="355" width="48" height="24" rx="12" fill="#c25b08"/>
+
+  <line x1="270" y1="420" x2="800" y2="420" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="335" y="389" width="400" height="25" rx="5" fill="#edf4ff"/>
+  <text x="535" y="407" text-anchor="middle" class="flow-label"><tspan class="step">1</tspan> Start GCPW work-account sign-in</text>
+
+  <line x1="800" y1="500" x2="270" y2="500" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="320" y="454" width="470" height="54" rx="5" fill="#edf4ff"/>
+  <text x="555" y="475" text-anchor="middle" class="flow-label"><tspan class="step">2</tspan> Validate account, 2-Step Verification and policy<tspan x="555" dy="20">; return authentication result to GCPW</tspan></text>
+
+  <line x1="270" y1="580" x2="1440" y2="580" stroke="#c25b06" stroke-width="3" marker-end="url(#arrow-amber)"/>
+  <rect x="680" y="549" width="520" height="25" rx="5" fill="#fff4e2"/>
+  <text x="940" y="567" text-anchor="middle" class="flow-label"><tspan class="step">3</tspan> Create/associate Windows profile; request device enrollment</text>
+
+  <line x1="1440" y1="660" x2="270" y2="660" stroke="#c25b06" stroke-width="3" marker-end="url(#arrow-amber)"/>
+  <rect x="620" y="629" width="610" height="25" rx="5" fill="#fff4e2"/>
+  <text x="925" y="647" text-anchor="middle" class="flow-label"><tspan class="step">4</tspan> Apply organizational-unit policies, applications and inventory state</text>
+
+  <line x1="270" y1="750" x2="800" y2="750" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="320" y="719" width="470" height="25" rx="5" fill="#edf4ff"/>
+  <text x="555" y="737" text-anchor="middle" class="flow-label"><tspan class="step">5</tspan> Open Gmail, Drive, Docs and approved SaaS</text>
+
+  <line x1="800" y1="840" x2="270" y2="840" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="310" y="809" width="480" height="25" rx="5" fill="#edf4ff"/>
+  <text x="550" y="827" text-anchor="middle" class="flow-label"><tspan class="step">6</tspan> Reuse Google session for approved services</text>
+
+  <rect x="70" y="1000" width="820" height="100" rx="12" fill="#fffaf0" stroke="#c58b08" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="94" y="1032" class="note-title">Offline sign-in boundary</text>
+  <text x="94" y="1062" class="note-body">GCPW may use the cached Windows sign-in only until the configured offline validity expires.</text>
+  <text x="94" y="1087" class="note-body">A password/security event or expired validity requires a fresh online Google sign-in.</text>
+
+  <rect x="910" y="1000" width="820" height="100" rx="12" fill="#fff4f4" stroke="#d63b32" stroke-width="2"/>
+  <text x="934" y="1032" class="note-title">Recovery and platform boundary</text>
+  <text x="934" y="1062" class="note-body">Keep a protected Google administrator recovery path outside normal user sign-in.</text>
+  <text x="934" y="1087" class="note-body">Business Premium/Intune is a Microsoft licensing boundary here, not the GCPW authentication plane.</text>
+
+  <line x1="70" y1="1140" x2="110" y2="1140" stroke="#2563eb" stroke-width="3"/>
+  <text x="122" y="1146" class="footer">normal sign-in and session flow</text>
+  <line x1="390" y1="1140" x2="430" y2="1140" stroke="#c58b08" stroke-width="3" stroke-dasharray="8 6"/>
+  <text x="442" y="1146" class="footer">offline, optional or recovery boundary</text>
+  <text x="1730" y="1146" text-anchor="end" class="footer">GCPW sign-in ≠ Intune enrollment</text>
+</svg>

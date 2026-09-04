@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1220" viewBox="0 0 1900 1220" role="img" aria-labelledby="title desc">
+  <title id="title">Solution 3 user sign-in and authentication workflow</title>
+  <desc id="desc">Sequence diagram showing a user launching Azure Virtual Desktop, authenticating with Microsoft Entra ID and MFA, receiving a brokered session, and attaching an FSLogix profile from Azure Files.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrow-amber" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#c58b08"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#17395f" flood-opacity="0.15"/>
+    </filter>
+    <style>
+      .title { font: 700 42px Arial, sans-serif; fill: #17395f; }
+      .subtitle { font: 21px Arial, sans-serif; fill: #60738c; }
+      .lane-title { font: 700 21px Arial, sans-serif; fill: #ffffff; }
+      .card-title { font: 700 25px Arial, sans-serif; fill: #17395f; }
+      .body { font: 17px Arial, sans-serif; fill: #25364d; }
+      .step { font: 700 16px Arial, sans-serif; fill: #17395f; }
+      .flow-label { font: 15px Arial, sans-serif; fill: #60738c; }
+      .note-title { font: 700 19px Arial, sans-serif; fill: #17395f; }
+      .note-body { font: 16px Arial, sans-serif; fill: #25364d; }
+      .footer { font: 14px Arial, sans-serif; fill: #60738c; }
+    </style>
+  </defs>
+
+  <rect width="1900" height="1220" fill="#f7fafc"/>
+  <text x="60" y="58" class="title">Solution 3 — User sign-in and authentication workflow</text>
+  <text x="60" y="94" class="subtitle">Microsoft Entra ID authenticates the user; AVD brokers the hosted session and Azure Files provides the profile</text>
+
+  <rect x="35" y="135" width="380" height="870" rx="16" fill="#eef5ff" stroke="#2563eb" stroke-width="3"/>
+  <rect x="445" y="135" width="430" height="870" rx="16" fill="#edf9f5" stroke="#0f766e" stroke-width="3"/>
+  <rect x="905" y="135" width="360" height="870" rx="16" fill="#f2efff" stroke="#6d4bc2" stroke-width="3"/>
+  <rect x="1295" y="135" width="570" height="870" rx="16" fill="#fff6e9" stroke="#c25b06" stroke-width="3"/>
+
+  <rect x="58" y="153" width="250" height="42" rx="16" fill="#2563eb"/>
+  <text x="183" y="181" text-anchor="middle" class="lane-title">USER / TERMINAL</text>
+  <rect x="468" y="153" width="270" height="42" rx="16" fill="#0f766e"/>
+  <text x="603" y="181" text-anchor="middle" class="lane-title">MICROSOFT ENTRA ID</text>
+  <rect x="928" y="153" width="220" height="42" rx="16" fill="#6d4bc2"/>
+  <text x="1038" y="181" text-anchor="middle" class="lane-title">AVD BROKER</text>
+  <rect x="1318" y="153" width="330" height="42" rx="16" fill="#c25b06"/>
+  <text x="1483" y="181" text-anchor="middle" class="lane-title">SESSION / PROFILE</text>
+
+  <rect x="62" y="220" width="326" height="140" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="2" filter="url(#shadow)"/>
+  <text x="84" y="254" class="card-title">User + access terminal</text>
+  <text x="84" y="284" class="body">Windows 11 PC • standard user</text>
+  <text x="84" y="311" class="body">Windows App / Remote Desktop client</text>
+  <text x="84" y="338" class="body">No business desktop data required locally</text>
+
+  <rect x="472" y="220" width="376" height="140" rx="12" fill="#ffffff" stroke="#0f766e" stroke-width="2" filter="url(#shadow)"/>
+  <text x="494" y="254" class="card-title">Microsoft Entra ID</text>
+  <text x="494" y="284" class="body">Authoritative user identity</text>
+  <text x="494" y="311" class="body">MFA • Conditional Access • token</text>
+  <text x="494" y="338" class="body">AVD user license validation</text>
+
+  <rect x="932" y="220" width="306" height="140" rx="12" fill="#ffffff" stroke="#6d4bc2" stroke-width="2" filter="url(#shadow)"/>
+  <text x="954" y="254" class="card-title">AVD service</text>
+  <text x="954" y="284" class="body">Workspace and desktop assignment</text>
+  <text x="954" y="311" class="body">Host-pool selection and brokering</text>
+  <text x="954" y="338" class="body">Reverse-connect session path</text>
+
+  <rect x="1322" y="220" width="516" height="140" rx="12" fill="#ffffff" stroke="#c25b06" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1344" y="254" class="card-title">Session host + Azure Files</text>
+  <text x="1344" y="284" class="body">Windows 11 Enterprise multi-session</text>
+  <text x="1344" y="311" class="body">Office, Chrome, Google Workspace and apps</text>
+  <text x="1344" y="338" class="body">FSLogix profile container from Azure Files</text>
+
+  <line x1="225" y1="360" x2="225" y2="970" stroke="#8ca4bd" stroke-width="2" stroke-dasharray="7 8"/>
+  <line x1="660" y1="360" x2="660" y2="970" stroke="#8ca4bd" stroke-width="2" stroke-dasharray="7 8"/>
+  <line x1="1085" y1="360" x2="1085" y2="970" stroke="#8ca4bd" stroke-width="2" stroke-dasharray="7 8"/>
+  <line x1="1580" y1="360" x2="1580" y2="970" stroke="#8ca4bd" stroke-width="2" stroke-dasharray="7 8"/>
+
+  <rect x="201" y="365" width="48" height="24" rx="12" fill="#2563eb"/>
+  <rect x="636" y="365" width="48" height="24" rx="12" fill="#0f766e"/>
+  <rect x="1061" y="365" width="48" height="24" rx="12" fill="#6d4bc2"/>
+  <rect x="1556" y="365" width="48" height="24" rx="12" fill="#c25b06"/>
+
+  <line x1="225" y1="430" x2="660" y2="430" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="270" y="399" width="345" height="25" rx="5" fill="#edf4ff"/>
+  <text x="442" y="417" text-anchor="middle" class="flow-label"><tspan class="step">1</tspan> Launch client and submit Entra sign-in</text>
+
+  <line x1="660" y1="510" x2="225" y2="510" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="270" y="464" width="390" height="54" rx="5" fill="#edf4ff"/>
+  <text x="465" y="485" text-anchor="middle" class="flow-label"><tspan class="step">2</tspan> Validate password/Hello, MFA and Conditional Access<tspan x="465" dy="20">; return access token to the client</tspan></text>
+
+  <line x1="225" y1="590" x2="1085" y2="590" stroke="#6d4bc2" stroke-width="3" marker-end="url(#arrow-green)"/>
+  <rect x="455" y="559" width="400" height="25" rx="5" fill="#f0edff"/>
+  <text x="655" y="577" text-anchor="middle" class="flow-label"><tspan class="step">3</tspan> Request assigned AVD workspace and desktop</text>
+
+  <line x1="1085" y1="670" x2="660" y2="670" stroke="#6d4bc2" stroke-width="3" marker-end="url(#arrow-green)"/>
+  <rect x="750" y="639" width="440" height="25" rx="5" fill="#f0edff"/>
+  <text x="970" y="657" text-anchor="middle" class="flow-label"><tspan class="step">4</tspan> Validate group assignment and broker a host</text>
+
+  <line x1="1085" y1="750" x2="1580" y2="750" stroke="#c25b06" stroke-width="3" marker-end="url(#arrow-amber)"/>
+  <rect x="1120" y="719" width="420" height="25" rx="5" fill="#fff4e2"/>
+  <text x="1330" y="737" text-anchor="middle" class="flow-label"><tspan class="step">5</tspan> Establish brokered reverse-connect session</text>
+
+  <line x1="1580" y1="830" x2="660" y2="830" stroke="#c25b06" stroke-width="3" marker-end="url(#arrow-amber)"/>
+  <rect x="850" y="799" width="540" height="25" rx="5" fill="#fff4e2"/>
+  <text x="1120" y="817" text-anchor="middle" class="flow-label"><tspan class="step">6</tspan> Validate session identity and attach FSLogix profile</text>
+
+  <line x1="1580" y1="910" x2="225" y2="910" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="640" y="879" width="600" height="25" rx="5" fill="#edf4ff"/>
+  <text x="940" y="897" text-anchor="middle" class="flow-label"><tspan class="step">7</tspan> Render hosted desktop; open Office, Google Workspace and apps</text>
+
+  <rect x="60" y="1040" width="860" height="100" rx="12" fill="#fffaf0" stroke="#c58b08" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="84" y="1072" class="note-title">Optional Google Workspace path</text>
+  <text x="84" y="1102" class="note-body">After the hosted session starts, Chrome accesses Google Workspace according to the selected/retained Google identity and session policy.</text>
+  <text x="84" y="1127" class="note-body">Google licensing is excluded from the cost calculation but the entitlement is required if these services are retained.</text>
+
+  <rect x="940" y="1040" width="900" height="100" rx="12" fill="#fff4f4" stroke="#d63b32" stroke-width="2"/>
+  <text x="964" y="1072" class="note-title">License and management boundary</text>
+  <text x="964" y="1102" class="note-body">Business Premium with Teams must be assigned to each AVD user; Intune/Defender support management but do not replace Entra authentication or the AVD broker.</text>
+  <text x="964" y="1127" class="note-body">No public RDP listener is required; Azure subscription/RBAC/budget controls govern the Azure resources.</text>
+
+  <line x1="60" y1="1180" x2="100" y2="1180" stroke="#2563eb" stroke-width="3"/>
+  <text x="112" y="1186" class="footer">identity and user-session flow</text>
+  <line x1="370" y1="1180" x2="410" y2="1180" stroke="#c25b08" stroke-width="3"/>
+  <text x="422" y="1186" class="footer">broker, profile or optional service flow</text>
+  <text x="1840" y="1186" text-anchor="end" class="footer">Authentication ≠ host-pool availability</text>
+</svg>
