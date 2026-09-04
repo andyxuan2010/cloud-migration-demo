@@ -1,10 +1,10 @@
-# Option 1 — Microsoft Entra ID + Microsoft Intune
+# Solution 1 — Microsoft Entra ID + Microsoft Intune
 
 ## Detailed architecture design, analysis, and comparison
 
 **Design scope:** 6-10 Windows 11 PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.
 
-**Document relationship:** This is the detailed design for Option 1. The authoritative baseline remains [`requirements.md`](requirements.md). Remote work and user/device portability are optional capabilities; security, recovery, endpoint control, and AD dependency removal remain mandatory.
+**Document relationship:** This is the detailed design for Solution 1. The authoritative baseline remains [`requirements.md`](requirements.md). Remote work and user/device portability are optional capabilities; security, recovery, endpoint control, and AD dependency removal remain mandatory.
 
 ## 1. Executive decision
 
@@ -27,7 +27,7 @@ Entra ID is not hosted AD DS. It does not provide traditional domain controllers
 
 ## 2. Architecture diagram
 
-![Microsoft Entra ID and Intune target architecture](entra_id_intune_target_architecture.png)
+![Microsoft Entra ID and Intune target architecture](images/entra_id_intune_target_architecture.png)
 
 The diagram shows the normal control and data paths in blue. The orange dashed path is optional mobility and is not required for acceptance of the baseline design.
 
@@ -150,6 +150,20 @@ For the Entra-authoritative model:
 
 SAML SSO does not automatically synchronize every user, group, license, or file permission. Those behaviors must be tested and documented.
 
+#### User sign-in and authentication workflow
+
+![Solution 1 user sign-in and authentication workflow](images/entra_id_google_authentication_workflow.svg)
+
+The workflow has two related but distinct authentication paths:
+
+1. The user signs in to the Entra-joined Windows PC with the corporate Entra account. Entra ID validates the identity and applies the configured MFA, Conditional Access, and device-state requirements. After successful authentication, Windows creates the user session; previously signed-in users may have limited cached sign-in continuity during a short connectivity outage.
+2. Intune supplies the device-management and compliance state used by the endpoint and, where configured, by Conditional Access. Intune does not authenticate the Google Workspace user or replace Entra ID as the identity provider.
+3. When the user opens Google Workspace, Google acts as the SAML service provider. If there is no valid Google session, Google redirects the browser to Entra ID with a SAML authentication request.
+4. Entra reuses the valid Entra session or performs the required authentication and MFA checks, then returns a signed SAML assertion to Google Workspace through the browser.
+5. Google verifies the assertion, matches the stable identifier/primary email to the existing Workspace account, creates a Google session, and grants access to Gmail, Drive, Docs, and other approved Workspace services.
+
+SAML SSO is authentication federation, not directory synchronization. Optional provisioning is a separate Entra-to-Google lifecycle workflow and must be tested for account matching, group behavior, suspension, deletion, aliases, and shared-drive ownership. At least one protected Google super-administrator recovery path must remain usable if Entra federation is unavailable.
+
 ### 4.5 Office and other SaaS
 
 Microsoft Office licensing must be treated separately from identity design. The business may use existing Office licenses, a Microsoft 365 bundle, or another valid license model. Do not purchase Exchange, OneDrive, SharePoint, or Copilot merely because Intune or Entra is selected unless those services have a confirmed business purpose.
@@ -193,12 +207,13 @@ Google Drive synchronization is not a complete backup. The design requires:
 
 ### 5.1 Normal user sign-in
 
-1. User starts an Entra-joined Windows 11 PC.
-2. User signs in with the corporate Entra account.
-3. MFA or other Conditional Access requirements are applied according to policy.
-4. Windows receives Intune configuration and compliance state.
-5. User opens Google Workspace; Entra SAML SSO is used if configured.
-6. User accesses Google Drive, Docs, Office, and approved SaaS according to the assigned groups and policies.
+See the detailed [user sign-in and authentication workflow](#user-sign-in-and-authentication-workflow) in section 4.4. The operational sequence is:
+
+1. User signs in to the Entra-joined Windows 11 PC with the corporate Entra account.
+2. Entra ID applies the required authentication, MFA, Conditional Access, and device-state checks; Intune manages the endpoint and reports compliance.
+3. User opens Google Workspace. Google redirects to Entra when a Google session is not already present.
+4. Entra returns a signed SAML assertion, and Google Workspace validates it before creating the Google session.
+5. User accesses Google Drive, Docs, Office, and approved SaaS according to the assigned groups, licenses, and policies.
 
 ### 5.2 New or rebuilt device
 
@@ -409,11 +424,11 @@ The comparison is against the updated requirements, where remote work and user/d
 | Replacement-device recovery | Strong with Intune and documented rebuild | Conditional | Strong for hosted profile, but infrastructure-dependent |
 | Suitability for this baseline | **Preferred** | **Conditional alternative** | **Exception only** |
 
-### Why Option 1 remains preferred
+### Why Solution 1 remains preferred
 
 The requirements make centrally managed Windows security, encryption, patching, inventory, application deployment, and local-admin control mandatory. Intune maps most directly to those requirements without introducing a new desktop-hosting platform.
 
-### When Option 2 may be selected
+### When Solution 2 may be selected
 
 Select Google Workspace + GCPW only if discovery proves that:
 
@@ -423,7 +438,7 @@ Select Google Workspace + GCPW only if discovery proves that:
 - the business accepts a workgroup-style Windows operating model;
 - the lower cost and simpler Google-centered administration outweigh Intune’s stronger Windows controls.
 
-### When Option 3 may be selected
+### When Solution 3 may be selected
 
 Select AVD only if a documented requirement justifies it, such as:
 
@@ -471,7 +486,7 @@ The design is accepted only when:
 
 ## 14. Decisions required before implementation
 
-- Confirm Entra ID as the authoritative workforce identity for Option 1.
+- Confirm Entra ID as the authoritative workforce identity for Solution 1.
 - Confirm the existing Google Workspace edition and whether SAML/provisioning features are available.
 - Confirm the exact Office licensing model; do not assume Microsoft 365 Business Premium or Copilot.
 - Confirm whether Defender for Business or another endpoint-security product is required.
