@@ -18,8 +18,6 @@ Architecture and requirements documentation for modernizing a small-business Win
 | [entra_id_intune_architecture.md](entra_id_intune_architecture.md) | Detailed design for Solution 1: Microsoft Entra ID + Microsoft Intune. |
 | [google_workspace_gcpw_architecture.md](google_workspace_gcpw_architecture.md) | Detailed design for Solution 2: Google Workspace + GCPW. |
 | [azure_virtual_desktop_architecture.md](azure_virtual_desktop_architecture.md) | Detailed design for Solution 3: Azure Virtual Desktop. |
-| [tailscale_ansible_enterprise_solution.md](tailscale_ansible_enterprise_solution.md) | Enterprise Tailscale + Ansible multi-site architecture and operating model. |
-| [tailscale_ansible_hands_on_lab.md](tailscale_ansible_hands_on_lab.md) | Hands-on four-site subnet-routing, SSH, WinRM, and Ansible validation lab. |
 
 ## Solutions evaluated
 
