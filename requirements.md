@@ -2,7 +2,7 @@
 
 **Document status:** Draft v0.3
 **Environment:** Lightweight small-business corporate network  
-**Scope:** 6–10 Windows PCs, currently joined to on-premises Active Directory  
+**Scope:** 10 Windows PCs, currently joined to on-premises Active Directory
 **Primary SaaS platform:** Google Workspace  
 **Date:** 2026-08-30
 
@@ -36,7 +36,7 @@ Each requirement has a unique identifier for traceability during solution design
 | Area | Current state |
 |---|---|
 | Organization size | Lightweight small-business corporate environment |
-| Endpoints | 6–10 company-used Windows PCs |
+| Endpoints | 10 company-used Windows PCs |
 | Operating system | Windows 10-based |
 | Device identity | All PCs are joined to the on-premises AD DS domain |
 | Primary productivity platform | Google Workspace, including Gmail, Google Drive, Google Docs, and other SaaS applications |
@@ -65,7 +65,7 @@ This is a security requirement, not an optional modernization preference.
 | OBJ‑01 | Remove the need to operate an on-premises AD DS domain controller. | Must |
 | OBJ‑02 | Preserve secure and reliable access to Google Workspace, Microsoft Office, communication tools, and approved business applications. | Must |
 | OBJ‑03 | Retain existing PCs when they meet security, performance, lifecycle, and compatibility requirements. | Should |
-| OBJ‑04 | Reduce infrastructure and administration appropriate to an organization with only 6–10 PCs. | Must |
+| OBJ‑04 | Reduce infrastructure and administration appropriate to an organization with only 10 PCs. | Must |
 | OBJ‑05 | Use cloud services and SaaS rather than introduce replacement on-premises servers. | Must |
 | OBJ‑06 | Avoid unnecessary enterprise-scale complexity, duplicated platforms, and overlapping licenses. | Should |
 | OBJ‑07 | Provide a controlled, testable, and reversible migration with minimal disruption. | Must |
@@ -81,7 +81,7 @@ This is a security requirement, not an optional modernization preference.
 ### 5.1 In scope
 
 - Current AD users, groups, computers, and policies required by the business
-- 6–10 Windows endpoints and their assigned users
+- 10 Windows endpoints and their assigned users
 - Cloud identity and user authentication
 - Windows sign-in and endpoint management
 - Google Workspace access and identity integration
@@ -127,7 +127,7 @@ Remote work and user/device portability are optional ideal-state capabilities, n
 
 Business continuity is not optional. The ability to replace a failed PC, recover corporate data, retain company control of domains and tenants, restore administrative access, and transfer support providers is classified as recoverability and ownership rather than remote-work portability.
 
-The design priority is: mandatory business and security needs first; then stability and recoverability; then simplicity and low operating cost; then optional mobility enhancements. Portability and mobility must not introduce servers, virtual-desktop infrastructure, duplicate management platforms, premium licenses, or recurring specialist effort unless the resulting business benefit is documented and proportionate to a 6–10 PC environment.
+The design priority is: mandatory business and security needs first; then stability and recoverability; then simplicity and low operating cost; then optional mobility enhancements. Portability and mobility must not introduce servers, virtual-desktop infrastructure, duplicate management platforms, premium licenses, or recurring specialist effort unless the resulting business benefit is documented and proportionate to a 10 PC environment.
 
 ### 7.1 Lightweight infrastructure and maintainability
 
@@ -326,7 +326,7 @@ The design priority is: mandatory business and security needs first; then stabil
 | OPS‑07 | The organization must retain at least two people or one internal owner plus an external support provider capable of recovering administrative access. | Must |
 | OPS‑08 | Documentation must be sufficient for a qualified replacement administrator to operate the environment without relying on undocumented personal knowledge. | Must |
 | OPS‑09 | Recurring licensing and cloud consumption must be reviewable and accompanied by cost alerts where applicable. | Must |
-| OPS‑10 | The selected design must remain proportionate to a 6–10 PC environment and avoid infrastructure that requires continuous specialist administration unless a specific business requirement justifies it. | Must |
+| OPS‑10 | The selected design must remain proportionate to a 10 PC environment and avoid infrastructure that requires continuous specialist administration unless a specific business requirement justifies it. | Must |
 
 ## 16. Discovery requirements before solution approval
 

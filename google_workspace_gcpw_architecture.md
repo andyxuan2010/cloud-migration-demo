@@ -2,7 +2,7 @@
 
 ## Detailed architecture design, analysis, and comparison
 
-**Design scope:** 6–10 Windows PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.
+**Design scope:** 10 Windows PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.
 
 **Document relationship:** This is the detailed design for Solution 2. The authoritative baseline remains [`requirements.md`](requirements.md). Remote work and user/device portability are optional; endpoint security, recovery, data ownership, and AD dependency removal remain mandatory.
 
@@ -388,7 +388,7 @@ The Google Workspace edition must be confirmed before approving this option. Goo
 
 ### Budgetary effort
 
-For a clean six-device environment with simple applications, budget approximately **28–44 implementation hours**. Allow approximately **40–60 hours** when profile migration, custom OMA-URI settings, MSI packaging, application remediation, or supplemental endpoint tooling is required. This excludes major hardware replacement, formal compliance work, complex application redevelopment, and ongoing managed support.
+For a clean 10-device environment with simple applications, budget approximately **28–44 implementation hours**. Allow approximately **40–60 hours** when profile migration, custom OMA-URI settings, MSI packaging, application remediation, or supplemental endpoint tooling is required. This excludes major hardware replacement, formal compliance work, complex application redevelopment, and ongoing managed support.
 
 ### Main cost drivers
 
@@ -403,7 +403,7 @@ For a clean six-device environment with simple applications, budget approximatel
 
 ### Standard deployment, operational, and maintenance budget
 
-For a comparable six-user/six-device planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, endpoint-tooling, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
+For a comparable six-user/10-device planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, endpoint-tooling, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
 
 | Cost category | Standard planning amount |
 |---|---:|

@@ -2,13 +2,13 @@
 
 **Document status:** Draft v0.1  
 **Prepared for:** Small-office cloud migration  
-**Scope:** 6 users, 6 office PCs, one existing on-premises Active Directory environment  
+**Scope:** 6 users, 10 office PCs, one existing on-premises Active Directory environment
 **Date:** 2026-08-30  
 **Currency:** CAD unless otherwise stated
 
 ## 1. Purpose
 
-This document evaluates three options for retiring the existing on-premises Active Directory Domain Services (AD DS) server while retaining six physical office PCs and the current Google Workspace-centered application model.
+This document evaluates three options for retiring the existing on-premises Active Directory Domain Services (AD DS) server while retaining 10 physical office PCs and the current Google Workspace-centered application model.
 
 The evaluated options are:
 
@@ -37,7 +37,7 @@ This draft uses the following assumptions. They must be validated during discove
 
 | Area | Assumption |
 |---|---|
-| Users and devices | 6 named users and 6 company-owned Windows PCs |
+| Users and devices | 6 named users and 10 company-owned Windows PCs |
 | Operating system | Windows 11 Pro, or hardware capable of running a supported Windows 11 Pro release |
 | Current identity | One on-premises AD DS domain and one domain controller/server |
 | Primary collaboration platform | Google Workspace, including Gmail, Google Drive, and Google Docs |
@@ -56,7 +56,7 @@ This draft uses the following assumptions. They must be validated during discove
 | ID | Requirement | Priority |
 |---|---|---|
 | BR-01 | Retire the on-premises AD DS server without losing access to users, devices, applications, or business data. | Mandatory |
-| BR-02 | Retain the six office PCs unless a device fails compatibility or security checks. | Mandatory |
+| BR-02 | Retain the 10 office PCs unless a device fails compatibility or security checks. | Mandatory |
 | BR-03 | Preserve access to Gmail, Google Drive, Google Docs, Microsoft Office, and approved communication tools. | Mandatory |
 | BR-04 | Support secure work from the office and, if approved, remote locations. | Mandatory |
 | BR-05 | Minimize ongoing administration for an environment with no more than 6–10 users in the near term. | Mandatory |
@@ -157,7 +157,7 @@ flowchart TD
     U["6 users"] --> E["Microsoft Entra ID"]
     E --> P["MFA and Conditional Access"]
     E --> G["Google Workspace SSO"]
-    P --> D["6 Entra-joined PCs"]
+    P --> D["10 Entra-joined PCs"]
     I["Microsoft Intune"] --> D
     D --> A["Office, Drive, SaaS apps"]
 ```
@@ -231,7 +231,7 @@ The solution must not be described as fully highly available unless the applicab
 | Google Workspace | Existing subscription retained; for the comparable model below, Business Plus is **CAD 28.70/user/month** on annual billing, or **CAD 172.20/month** for 6 users. |
 | Cloud backup | CAD 30–100/month, depending on protected services, capacity, retention, and vendor. |
 | Azure consumption | Normally negligible for the identity/device-management design itself; excludes optional logging, automation, or other Azure workloads. |
-| Implementation effort | **32–48 hours** for a clean six-device environment; add remediation time for legacy applications, complex profiles, server roles, or large data volumes. |
+| Implementation effort | **32–48 hours** for a clean 10-device environment; add remediation time for legacy applications, complex profiles, server roles, or large data volumes. |
 | Indicative one-time services at CAD 125–150/hour | **CAD 4,000–7,200** |
 
 ## 6. Solution 2 — Google Workspace with GCPW and Windows device management
@@ -243,7 +243,7 @@ flowchart TD
     U["6 users"] --> G["Google Workspace identity"]
     G --> M["MFA and access policies"]
     G --> W["GCPW Windows sign-in"]
-    X["Google Windows management"] --> D["6 workgroup PCs"]
+    X["Google Windows management"] --> D["10 workgroup PCs"]
     W --> D
     D --> A["Gmail, Drive, Office, SaaS apps"]
 ```
@@ -361,7 +361,7 @@ Sizing must be tested with actual browser tabs, Google Drive behavior, Office fi
 6. Configure Azure Files, FSLogix, permissions, profile exclusions, backup, and restore tests.
 7. Pilot with one or two users and measure sign-in time, CPU, memory, storage IOPS, application performance, videoconferencing, and peripheral redirection.
 8. Adjust host size, session density, scaling, image, and profile settings using pilot evidence.
-9. Configure and harden the six endpoint/terminal devices and deploy the Remote Desktop client.
+9. Configure and harden the 10 endpoint/terminal devices and deploy the Remote Desktop client.
 10. Migrate users in stages, stabilize, eliminate server dependencies, and then retire AD DS.
 
 ### 7.5 Advantages
@@ -371,7 +371,7 @@ Sizing must be tested with actual browser tabs, Google Drive behavior, Office fi
 - Existing PCs can have extended useful life if they can securely run the AVD client and supported local operating system.
 - A standard image reduces configuration drift across user desktops.
 - Supports controlled remote access without exposing RDP directly to the Internet.
-- Pooled multi-session desktops can be more economical than six dedicated Cloud PCs when concurrency and schedules are well managed.
+- Pooled multi-session desktops can be more economical than 10 dedicated Cloud PCs when concurrency and schedules are well managed.
 
 ### 7.6 Limitations and risks
 
@@ -420,7 +420,7 @@ The numbers are decision aids, not measurements. A mandatory requirement overrid
 
 ### 9.1 Standard six-user cost model
 
-The following comparable model assumes six users and six PCs, normal SaaS and Office workloads, annual commitments where available, Canadian dollars before tax, and no major hardware replacement. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
+The following comparable model assumes six users and 10 PCs, normal SaaS and Office workloads, annual commitments where available, Canadian dollars before tax, and no major hardware replacement. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, and backup cost and excludes support labor. “Maintenance” is routine administration at **CAD 125–150/hour** and excludes incidents, major projects, hardware replacement, and vendor support contracts.
 
 | Solution | Typical deployment cost | Typical operational cost | Typical maintenance cost |
 |---|---:|---:|---:|
@@ -471,7 +471,7 @@ For only six users with ordinary SaaS and Office workloads, AVD is technically v
 The project is complete only when:
 
 - all six users can sign in with the approved cloud identity and MFA;
-- all six PCs or terminal devices are inventoried, encrypted, patched, protected, and centrally managed;
+- all 10 PCs or terminal devices are inventoried, encrypted, patched, protected, and centrally managed;
 - Gmail, Google Drive, Google Docs, Microsoft Office, communication tools, printing, scanning, and required peripherals pass user acceptance testing;
 - user and shared data have been migrated, protected, and sample-restored;
 - onboarding, offboarding, support, device replacement, and emergency access have been tested and documented;

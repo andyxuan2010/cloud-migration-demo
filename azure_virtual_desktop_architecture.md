@@ -2,7 +2,7 @@
 
 ## Detailed architecture design, analysis, and comparison
 
-**Design scope:** 6–10 users, six initial users, Windows PCs currently joined to on-premises AD DS, Google Workspace as the primary SaaS platform, Microsoft Office, communication tools, and retirement of the local domain controller.
+**Design scope:** 10 Windows PCs, six initial users, currently joined to on-premises AD DS, Google Workspace as the primary SaaS platform, Microsoft Office, communication tools, and retirement of the local domain controller.
 
 **Document relationship:** The authoritative baseline is [`requirements.md`](requirements.md). Remote work and user/device portability are optional; identity security, endpoint recovery, data ownership, application continuity, and AD dependency removal remain mandatory.
 
@@ -19,7 +19,7 @@ AVD is justified when one or more of the following are confirmed business requir
 - the office PCs should be inexpensive terminals with a longer replacement cycle; or
 - a demonstrated security, support, or compliance benefit outweighs the added Azure consumption and operational work.
 
-If the business mainly needs to remove AD DS while retaining six to ten capable PCs, Entra ID + Intune remains the simpler and lower-risk baseline. AVD adds a host-pool lifecycle, image management, profile storage, Azure networking, session troubleshooting, licensing validation, Internet dependency, and consumption-cost control. Those components must be accepted as a deliberate trade-off rather than introduced merely as an AD replacement.
+If the business mainly needs to remove AD DS while retaining 10 capable PCs, Entra ID + Intune remains the simpler and lower-risk baseline. AVD adds a host-pool lifecycle, image management, profile storage, Azure networking, session troubleshooting, licensing validation, Internet dependency, and consumption-cost control. Those components must be accepted as a deliberate trade-off rather than introduced merely as an AD replacement.
 
 The preferred AVD target is:
 
@@ -50,7 +50,7 @@ AVD changes the operating model, not just the login method. Every user session, 
 
 ### 3.2 Prefer a pooled host pool
 
-Six users generally do not need six always-on personal desktops. A pooled host pool provides a common image and can place users on an available session host. Pooled desktops reduce idle capacity and simplify image management, but they require application compatibility testing, profile persistence, and clear handling of user-specific settings.
+Six users generally do not need 10 always-on personal desktops. A pooled host pool provides a common image and can place users on an available session host. Pooled desktops reduce idle capacity and simplify image management, but they require application compatibility testing, profile persistence, and clear handling of user-specific settings.
 
 ### 3.3 Separate pilot economics from production availability
 

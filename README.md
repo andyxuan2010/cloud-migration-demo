@@ -4,7 +4,7 @@ Architecture and requirements documentation for modernizing a small-business Win
 
 ## Scope
 
-- Six initial users and six company-owned Windows PCs, with room to grow to 6–10 devices.
+- Six initial users and 10 company-owned Windows PCs.
 - Google Workspace remains the primary collaboration platform.
 - Microsoft Office and common SaaS applications remain in scope.
 - The target removes the local domain controller only after all AD DS dependencies are migrated, replaced, or formally accepted.
@@ -35,7 +35,7 @@ Architecture and requirements documentation for modernizing a small-business Win
 
 ## Budgetary cost model
 
-The current planning model uses Canadian dollars before tax for six users and six devices. It separates one-time deployment, recurring operational cost, and routine maintenance labor.
+The current planning model uses Canadian dollars before tax for six users and 10 devices. It separates one-time deployment, recurring operational cost, and routine maintenance labor.
 
 | Solution | Deployment | Operations / month | Maintenance / month |
 |---|---:|---:|---:|
