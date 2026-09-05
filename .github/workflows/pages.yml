@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Safety net for occasional missed push events; the latest main is republished automatically.
+  schedule:
+    - cron: "17 * * * *"
 
 permissions:
   contents: read
