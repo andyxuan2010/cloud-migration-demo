@@ -2,6 +2,8 @@
 
 Architecture and requirements documentation for modernizing a small-business Windows environment and retiring its on-premises Active Directory Domain Services (AD DS) dependency.
 
+> **Project site:** [andyxuan.ca/cloud-migration-demo/](https://andyxuan.ca/cloud-migration-demo/)
+
 ## Scope and assumptions
 
 - Six initial users and up to 10 company-owned Windows 11 PCs.
