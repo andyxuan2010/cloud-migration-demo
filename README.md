@@ -20,8 +20,10 @@ Architecture and requirements documentation for modernizing a small-business Win
 | [requirements](requirements.md) | Authoritative, solution-neutral requirements and acceptance criteria. |
 | [cloud identity migration options](cloud_identity_migration_options.md) | Solution comparison, decision criteria, risks, and migration overview. |
 | [entra id intune architecture](entra_id_intune_architecture.md) | Detailed design for Solution 1: Microsoft Entra ID + Microsoft Intune. |
+| [solution 1 implementation action plan](solution_1_implementation_action_plan.md) | Task-level execution checklist for Solution 1, including owners, dependencies, gates, evidence, rollback, and handover. |
 | [google workspace gcpw architecture](google_workspace_gcpw_architecture.md) | Detailed design for Solution 2: Google Workspace + GCPW. |
 | [azure virtual desktop architecture](azure_virtual_desktop_architecture.md) | Detailed design for Solution 3: Azure Virtual Desktop. |
+| [solution 3 implementation action plan](solution_3_implementation_action_plan.md) | Task-level execution checklist for Solution 3 AVD, including host pools, images, profiles, gates, recovery, and handover. |
 
 ## Recommended direction
 
