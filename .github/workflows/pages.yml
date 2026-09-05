@@ -1,5 +1,6 @@
 name: Deploy GitHub Pages
 
+# Publish the current main branch automatically whenever documentation or site assets change.
 on:
   push:
     branches: [main]
