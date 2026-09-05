@@ -324,13 +324,11 @@
     }
     .empty { padding: 25px 12px; color: var(--muted); text-align: center; }
 
-    .reader-view { max-width: 980px; margin: 0 auto; padding: 20px 0 80px; }
-    .reader-view.wide-document { max-width: 1240px; }
-    .reader-view.wide-document .reader { padding: clamp(26px, 4vw, 48px); }
+    .reader-view { width: min(1240px, calc(100% - 32px)); margin: 0 auto; padding: 20px 0 80px; }
     .reader-navigation { justify-content: space-between; }
     .file-label { min-width: 0; overflow: hidden; color: var(--muted); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
     .reader {
-      padding: clamp(26px, 5vw, 64px);
+      padding: clamp(26px, 4vw, 48px);
       border: 1px solid var(--line);
       border-radius: 18px;
       background: var(--panel);
@@ -386,10 +384,8 @@
       .catalog-toolbar { align-items: stretch; flex-direction: column; gap: 10px; margin-bottom: 24px; }
       .doc-count { margin: 0 4px; }
       .category-breadcrumb, .reader-navigation { align-items: flex-start; flex-direction: column; gap: 10px; }
-      .reader-view { width: min(100% - 24px, 980px); padding-top: 18px; }
-      .reader-view.wide-document { width: min(100% - 24px, 1240px); }
+      .reader-view { width: min(100% - 24px, 1240px); padding-top: 18px; }
       .reader { padding: 24px 18px; border-radius: 13px; }
-      .reader-view.wide-document .reader { padding: 24px 18px; }
       .reader-tools { align-items: flex-start; }
       .github-link { font-size: 0; }
       .github-link::after { content: "GitHub ↗"; font-size: 13px; }
@@ -493,10 +489,6 @@
       const REPOSITORY = "https://github.com/andyxuan2010/cloud-migration-demo";
       const BRANCH = "main";
       const DEFAULT_DOCUMENT = "README.md";
-      const WIDE_DOCUMENTS = new Set([
-        "solution_1_implementation_action_plan.md",
-        "solution_3_implementation_action_plan.md"
-      ]);
       const CATEGORIES = {
         overview: {
           title: "Start here",
@@ -621,7 +613,6 @@
         renderNavigation();
         elements.catalog.hidden = true;
         elements.reader.hidden = false;
-        elements.reader.classList.toggle("wide-document", WIDE_DOCUMENTS.has(path));
         elements.file.textContent = path;
         elements.readerPath.textContent = path;
         elements.headerPath.textContent = path;
