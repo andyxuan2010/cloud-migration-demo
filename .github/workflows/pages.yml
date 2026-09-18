@@ -62,7 +62,7 @@ jobs:
   deploy:
     needs: documentation-portal-gate
     name: Publish Cloud Migration documentation portal
-    if: needs['documentation-portal-gate'].outputs.enabled == 'true' && github.ref == 'refs/heads/main'
+    if: needs['documentation-portal-gate'].outputs.enabled == 'false' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
