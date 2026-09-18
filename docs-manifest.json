@@ -1,11 +1,13 @@
 {
+  "generatedAt": "2026-09-18T01:44:38Z",
   "documents": [
     "docs/azure_virtual_desktop_architecture.md",
     "docs/cloud_identity_migration_options.md",
     "docs/entra_id_intune_architecture.md",
     "docs/google_workspace_gcpw_architecture.md",
     "docs/README.md",
-    "docs/requirements.md"
-  ],
-  "generatedAt": "2026-09-18T01:42:29Z"
+    "docs/requirements.md",
+    "docs/solution_1_implementation_action_plan.md",
+    "docs/solution_3_implementation_action_plan.md"
+  ]
 }
