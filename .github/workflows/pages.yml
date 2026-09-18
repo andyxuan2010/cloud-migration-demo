@@ -52,11 +52,11 @@ jobs:
           set -euo pipefail
 
           if [[ "${IS_ORIGIN,,}" == "true" ]]; then
-            echo "enabled=false" >> "${GITHUB_OUTPUT}"
-            echo "Documentation portal workflow is disabled for the origin repository."
-          else
             echo "enabled=true" >> "${GITHUB_OUTPUT}"
-            echo "Documentation portal workflow is enabled for the mirror repository."
+            echo "Documentation portal workflow is enabled for the origin repository."
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "Documentation portal workflow is disabled for the mirror repository."
           fi
 
   deploy:
