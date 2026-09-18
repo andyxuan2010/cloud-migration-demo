@@ -1,0 +1,6 @@
+{
+  "title": "Cloud Migration Demo",
+  "description": "Architecture and requirements guidance for moving a small-business Windows environment from on-premises Active Directory to cloud-native identity, endpoint, and desktop services.",
+  "eyebrow": "Cloud migration · Architecture and delivery guidance",
+  "repository": "https://github.com/andyxuan2010/cloud-migration-demo"
+}

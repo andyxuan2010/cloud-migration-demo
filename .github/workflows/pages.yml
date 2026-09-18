@@ -1,50 +1,105 @@
-name: Deploy GitHub Pages
+name: Publish Cloud Migration documentation portal
 
 # Publish the current main branch automatically whenever documentation or site assets change.
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - "**/*.md"
+      - "**/*.MD"
+      - "**/*.pdf"
+      - "**/*.vsdx"
+      - "docs/images/**"
+      - "docs-manifest.json"
+      - ".nojekyll"
+      - "site/**"
+      - ".github/workflows/pages.yml"
+      - "scripts/Generate-DocsManifest.ps1"
+      - "scripts/Build-DocsSite.ps1"
+      - "scripts/Test-DocsSite.ps1"
   workflow_dispatch:
   # Safety net for occasional missed push events; the latest main is republished automatically.
   schedule:
     - cron: "17 * * * *"
+  repository_dispatch:
+    types:
+      - stage-snapshot
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  documentation-portal-gate:
+    name: Documentation Portal Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      enabled: ${{ steps.gate.outputs.enabled }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Evaluate IS_ORIGIN
+        id: gate
+        shell: bash
+        env:
+          IS_ORIGIN: ${{ vars.IS_ORIGIN }}
+        run: |
+          set -euo pipefail
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+          if [[ "${IS_ORIGIN,,}" == "true" ]]; then
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "Documentation portal workflow is disabled for the origin repository."
+          else
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+            echo "Documentation portal workflow is enabled for the mirror repository."
+          fi
 
   deploy:
-    needs: build
-    permissions:
-      pages: write
-      id-token: write
+    needs: documentation-portal-gate
+    name: Publish Cloud Migration documentation portal
+    if: needs['documentation-portal-gate'].outputs.enabled == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Generate documentation manifest
+        shell: pwsh
+        run: ./scripts/Generate-DocsManifest.ps1
+
+      - name: Build documentation site
+        shell: pwsh
+        run: ./scripts/Build-DocsSite.ps1
+
+      - name: Validate generated documentation site
+        shell: pwsh
+        run: ./scripts/Test-DocsSite.ps1
+
+      - name: Skip GitHub Pages deployment for private repository
+        if: github.event.repository.visibility != 'public'
+        run: echo "Repository is private; GitHub Pages configuration and deployment will be skipped."
+
+      - name: Configure GitHub Pages
+        if: github.event.repository.visibility == 'public'
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Upload site
+        if: github.event.repository.visibility == 'public'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: _site
+
+      - name: Deploy
+        if: github.event.repository.visibility == 'public'
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
