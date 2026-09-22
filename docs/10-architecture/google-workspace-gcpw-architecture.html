@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- GENERATED_DOCUMENTATION_SITE -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture and requirements guidance for moving a small-business Windows environment from on-premises Active Directory to cloud-native identity, endpoint, and desktop services.">
+  <meta name="color-scheme" content="light dark">
+  <title>Solution 2 — Google Workspace + GCPW + Windows Device Management · Cloud Migration Demo</title>
+  <link rel="stylesheet" href="../../styles.css?v=639257110262405759">
+</head>
+<body data-index-path="../../index.html">
+  <header class="topbar">
+    <nav class="global-nav" aria-label="Primary">
+      <a href="https://andyxuan.ca/">Home</a>
+      <a href="https://andyxuan.ca/docs/">▤ Library</a>
+      <a href="https://github.com/andyxuan2010/cloud-migration-demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+    <a class="brand" href="../../index.html" aria-label="Documentation home">
+      <span class="brand-mark" aria-hidden="true">CM</span>
+      <span class="brand-text">Cloud Migration Demo <small>CCOE Azure documentation</small></span>
+    </a>
+    <div class="header-tools">
+      <div class="language-switch" aria-label="Language selection">
+        <span class="active" aria-current="true">EN</span>
+        <span aria-disabled="true">FR</span>
+        <span aria-disabled="true">中</span>
+      </div>
+      <button class="icon-button" id="themeButton" type="button" aria-label="Toggle dark mode" title="Toggle color theme">◐</button>
+    </div>
+  </header>
+
+  <main class="reader-view">
+  <div class="reader-navigation">
+    <a class="back-button" href="../../index.html">← All documents</a>
+    <span class="reader-path">docs/10-architecture/google-workspace-gcpw-architecture.md</span>
+  </div>
+  <article class="reader">
+    <div class="reader-tools">
+      <span class="file-label">docs/10-architecture/google-workspace-gcpw-architecture.md</span>
+      <a class="github-link" href="https://github.com/andyxuan2010/cloud-migration-demo/blob/main/docs/10-architecture/google-workspace-gcpw-architecture.md" target="_blank" rel="noopener">View source on GitHub ↗</a>
+    </div>
+    <div class="markdown-body">
+    <h2>Detailed architecture design, analysis, and comparison</h2>
+<p><strong>Design scope:</strong> 10 Windows PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.</p>
+<p><strong>Document relationship:</strong> This is the detailed design for Solution 2. The authoritative baseline remains <a href="../90-decisions/requirements.html"><code>requirements.md</code></a>. Remote work and user/device portability are optional; endpoint security, recovery, data ownership, and AD dependency removal remain mandatory.</p>
+<h2>1. Executive decision</h2>
+<p>Google Workspace + Google Credential Provider for Windows (GCPW) + Google Windows device management is a Google-first alternative when Google Workspace is already the company’s dominant platform and Windows requirements are simple. Its cost advantage is conditional: supplemental endpoint controls or a common Microsoft 365 baseline can reduce or eliminate the difference.</p>
+<p>Google Workspace becomes the authoritative workforce identity. GCPW lets users sign in to Windows with their managed Google Account. Google Admin console Windows management can apply supported settings, custom OMA-URI settings, selected MSI application deployments, device inventory, and administrative actions.</p>
+<p>This option is not a full Active Directory or Intune replacement by default. It must pass a feature-level pilot for encryption and recovery, local-administrator control, antivirus/EDR, Windows patching, application deployment, inventory, reporting, and device retirement. If those gaps require a separate MDM/UEM, endpoint-security, patching, privilege-management, or RMM platform, the apparent simplicity and cost advantage may disappear.</p>
+<p>The recommended target for this option is:</p>
+<ul>
+<li>Google Workspace as the authoritative identity and collaboration platform;</li>
+<li>six Microsoft 365 Business Premium with Teams licenses as the common Microsoft portfolio baseline for Office, Defender for Business, and Microsoft identity services, unless an approved reduced-cost exception is documented;</li>
+<li>Microsoft Entra ID P1-level controls and Intune Plan 1 remain included in that bundle but are <strong>not</strong> the Windows management plane for this option; do not enroll GCPW-managed PCs into Intune unless the business deliberately changes control planes and validates compatibility;</li>
+<li>GCPW installed on supported Windows 11 Pro PCs;</li>
+<li>Google Windows device management enabled and enrolled;</li>
+<li>Google Admin organizational units used for Pilot, Standard, and Exception policies;</li>
+<li>Chrome and Google Drive for desktop managed as core applications;</li>
+<li>Microsoft Office delivered through the approved Business Premium baseline, or through a separately validated license only if that baseline is waived;</li>
+<li>independent endpoint security, backup, and local-administrator controls where Google-native capabilities are insufficient;</li>
+<li>the router/firewall providing DHCP and DNS forwarding after AD DS retirement;</li>
+<li>optional remote work or secondary-device portability enabled only through a separate decision.</li>
+</ul>
+<p>Google’s current documentation states that GCPW supports Windows 10/11 Pro, Pro for Workstations, Enterprise, or Education, requires Chrome 81 or later, and is not compatible with third-party mobile-device-management providers. GCPW with Windows device management is edition-dependent and must be confirmed before procurement.</p>
+<p>The common Microsoft licensing baseline does not make Microsoft Entra ID the authoritative directory for Solution 2. Google Workspace remains authoritative for user lifecycle, GCPW sign-in, Google SaaS, and Google device management. Microsoft 365 services that are not required by the approved design must not be configured merely because they are included in the bundle.</p>
+<h2>2. Architecture diagram</h2>
+<p><img src="../images/google_gcpw_target_architecture.png" alt="Google Workspace and GCPW target architecture" loading="lazy"></p>
+<p>Blue paths represent normal identity, management, and data flows. Orange paths represent optional or conditional controls. The “Additional controls” box is intentional: the Google-native Windows feature set must be validated rather than assumed to provide complete Intune-equivalent coverage.</p>
+<h2>3. Design principles</h2>
+<h3>3.1 Google-first identity</h3>
+<p>There is one authoritative user lifecycle: Google Workspace. User creation, suspension, password recovery, 2-Step Verification, groups, organizational units, and Google SaaS access are controlled in Google Admin. Windows sign-in uses GCPW against the same managed Google identity.</p>
+<h3>3.2 Keep Windows local and simple</h3>
+<p>The physical PCs remain normal Windows endpoints. Users run approved Office applications, Chrome, Google Drive for desktop, communication software, and local peripheral workflows. No AVD session hosts, Azure Files profile containers, or replacement domain controller are introduced.</p>
+<h3>3.3 Do not overstate endpoint-management coverage</h3>
+<p>Google Windows management can apply supported settings and custom OMA-URI settings, and it can deploy MSI packages using documented XML and hash values. This does not establish parity with Intune for every Windows security, application, privilege, remediation, reporting, or recovery capability. Each mandatory requirement must be mapped to an implemented and tested control.</p>
+<h3>3.4 No third-party MDM conflict</h3>
+<p>GCPW is documented as incompatible with third-party mobile-device-management providers. Do not layer another MDM/UEM over GCPW without explicit vendor validation. Endpoint security, backup, and remote-support products must be evaluated separately and must not take ownership of incompatible management functions.</p>
+<h3>3.5 Recovery is mandatory; mobility is optional</h3>
+<p>The business must recover data, administrative access, and a failed PC. Employees do not need to work remotely or use secondary devices unless the business separately approves that capability.</p>
+<h3>3.6 Five-pillar validation using the Azure Well-Architected lens</h3>
+<p>The Azure Well-Architected Framework is used here as a technology-neutral quality lens. Solution 2 is Google-first and does not depend on Azure services, but the five concerns still apply to Google Workspace, GCPW, supplemental endpoint controls, SaaS dependencies, and local Windows endpoints.</p>
+<table><thead><tr>
+<th>Pillar</th>
+<th>Assessment</th>
+<th>Controls and evidence required before approval</th>
+</tr></thead><tbody>
+<tr>
+<td>Reliability</td>
+<td>Partial; offline and backup behavior are defined, but outage evidence must be completed</td>
+<td>Set the approved RTO/RPO and test first sign-in during an Internet outage, finite offline-validity expiry, password/security-event reauthentication, Google Workspace or backup unavailability, router recovery, device replacement, and local-data restore. Document which work continues offline and do not imply provider-level high availability.</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Strong control map; detection and response need explicit evidence</td>
+<td>Keep 2-Step Verification, FIDO2/passkeys where practical, separate admin and emergency accounts, domain restriction, BitLocker escrow, AV/EDR, firewall, standard-user controls, and no Internet-exposed administration. Add admin-activity review, lost-device/token-revocation handling, incident triage, and documented recovery from a compromised Google account.</td>
+</tr>
+<tr>
+<td>Cost Optimization</td>
+<td>Detailed model; common Microsoft baseline and supplemental-control economics need ongoing review</td>
+<td>Track Microsoft 365 Business Premium, Google Workspace entitlement, backup, endpoint-security, RMM, and support costs against the approved monthly ceiling. Review license and device utilization monthly, remove unused controls, and price optional mobility/BYOD separately. Reject a supplemental product when its cost or overlap defeats the Google-first rationale.</td>
+</tr>
+<tr>
+<td>Operational Excellence</td>
+<td>Good rollout and support process; standard ownership and change evidence must be retained</td>
+<td>Name a primary and backup operator, keep the Google Admin/GCPW baseline versioned, pilot policy and application changes, document rollback and device unenrollment, and review Google, endpoint, backup, and firewall service health and alerts. Exercise onboarding, offboarding, incident, restore, and replacement-device runbooks.</td>
+</tr>
+<tr>
+<td>Performance Efficiency</td>
+<td>Missing an explicit measurement baseline</td>
+<td>Measure first GCPW sign-in and subsequent Windows logon time, policy synchronization, MSI/application deployment, Google Drive/Office/Chrome responsiveness, endpoint CPU/memory/disk, and office bandwidth/latency. Test representative concurrent use and simplify policies or add capacity only when measurements justify it.</td>
+</tr>
+</tbody></table>
+<h2>4. Logical architecture</h2>
+<h3>4.1 Google Workspace identity and administration</h3>
+<p>Google Workspace is the authoritative directory for this option.</p>
+<p>Recommended controls:</p>
+<ul>
+<li>one verified corporate domain;</li>
+<li>one named account per employee;</li>
+<li>separate super-administrator accounts for administrative work;</li>
+<li>at least two separately protected emergency administrator accounts;</li>
+<li>organizational units for Pilot, Standard, and Exception device/user policies;</li>
+<li>groups for applications, shared drives, administrators, and exceptions;</li>
+<li>mandatory 2-Step Verification for users and administrators;</li>
+<li>FIDO2/security-key or passkey enforcement where supported and practical;</li>
+<li>context-aware or access policies where included in the selected edition;</li>
+<li>password, recovery, suspension, and offboarding procedures;</li>
+<li>audit and investigation-log retention for the approved period.</li>
+</ul>
+<p>Google account ownership must be company-controlled. Do not use personal Gmail accounts for company data, billing, tenant ownership, emergency recovery, or administrative access.</p>
+<h3>4.2 GCPW layer</h3>
+<p>GCPW is installed on each corporate Windows PC and configured in Google Admin.</p>
+<p>Baseline GCPW settings:</p>
+<ul>
+<li>permit only the company’s approved Workspace domain(s);</li>
+<li>use an organization-specific enrollment token from the Admin console;</li>
+<li>enable automatic enrollment into Windows device management where supported;</li>
+<li>permit only one managed Google user per assigned PC unless a shared-device use case is explicitly approved;</li>
+<li>define an online sign-in validity period rather than allowing indefinite offline access;</li>
+<li>enable automatic GCPW updates after pilot validation;</li>
+<li>document the first-sign-in process and the behavior after a Google password change or security event;</li>
+<li>associate an existing Windows profile only through a tested procedure;</li>
+<li>avoid unmanaged local accounts except for controlled break-glass or recovery purposes.</li>
+</ul>
+<p>GCPW’s first sign-in requires Internet connectivity. Subsequent Windows sign-in can work offline, subject to the configured offline validity period and local Windows behavior. This behavior must be tested because a user may otherwise be locked out during an Internet outage or after an account-security event.</p>
+<h4>User sign-in and authentication workflow</h4>
+<p><img src="../images/google_gcpw_authentication_workflow.svg" alt="Solution 2 user sign-in and authentication workflow" loading="lazy"></p>
+<p>The workflow has one authoritative Google authentication path followed by optional Google device enrollment:</p>
+<ol>
+<li>The user selects the GCPW work-account sign-in option on the corporate Windows PC.</li>
+<li>GCPW sends the sign-in to Google Workspace. Google validates the managed account, domain restriction, password, 2-Step Verification, and applicable access policies.</li>
+<li>Google returns the authentication result to GCPW. GCPW creates or associates the approved Windows profile and starts the user session.</li>
+<li>When automatic enrollment is enabled, GCPW registers the device with Google Windows device management using the approved enrollment token. Google Admin applies the Pilot or Standard organizational-unit settings and approved applications.</li>
+<li>The user opens Gmail, Drive, Docs, and other approved SaaS. The resulting Google session is reused according to the service and browser session policies.</li>
+<li>During a short connectivity outage, GCPW may permit cached Windows sign-in until the configured offline-validity period expires. A password change, security event, or expired validity requires a fresh online Google sign-in.</li>
+</ol>
+<p>Microsoft 365 Business Premium is the common licensing boundary for Office and Microsoft security services in this option; it does not replace Google Workspace as the GCPW identity provider. Keep a protected Google administrator recovery path outside normal user sign-in and test it independently.</p>
+<h3>4.3 Google Windows device-management layer</h3>
+<p>Enable Windows device management in Google Admin and apply settings through organizational units.</p>
+<p>Use the smallest policy set that satisfies the requirements:</p>
+<table><thead><tr>
+<th>Policy area</th>
+<th>Target design</th>
+</tr></thead><tbody>
+<tr>
+<td>Organizational units</td>
+<td><code>Pilot</code>, <code>Standard</code>, and <code>Exception</code>; avoid per-device policy sprawl</td>
+</tr>
+<tr>
+<td>GCPW settings</td>
+<td>Allowed domains, automatic enrollment, account count, offline validity, update behavior</td>
+</tr>
+<tr>
+<td>Windows settings</td>
+<td>Supported security and device settings exposed by Google; custom OMA-URI only where justified</td>
+</tr>
+<tr>
+<td>Applications</td>
+<td>Chrome, GCPW, Drive for desktop, and required MSI packages with version/hash control</td>
+</tr>
+<tr>
+<td>Inventory</td>
+<td>Device identity, last contact, installed applications, and management status</td>
+</tr>
+<tr>
+<td>Actions</td>
+<td>Device sign-out, block/retire actions, and other documented actions supported by the edition</td>
+</tr>
+<tr>
+<td>Reporting</td>
+<td>Google Admin reports plus separate endpoint-security and backup reporting</td>
+</tr>
+</tbody></table>
+<p>Custom settings must be treated as controlled configuration code: record the OMA-URI, data type, value, scope, owner, test result, and rollback action. Google does not assume responsibility for arbitrary third-party settings entered as custom policies.</p>
+<h3>4.4 Endpoint-security and control-gap layer</h3>
+<p>The following controls must be proven in the pilot, not inferred from GCPW:</p>
+<ul>
+<li>BitLocker enablement and recovery-key escrow;</li>
+<li>antivirus/endpoint detection and response;</li>
+<li>host firewall enforcement;</li>
+<li>Windows quality and security update deadlines;</li>
+<li>standard-user enforcement and controlled elevation;</li>
+<li>local-administrator password rotation;</li>
+<li>application allow/block and removal behavior;</li>
+<li>remote lock, retire, or wipe behavior;</li>
+<li>device compliance reporting and remediation;</li>
+<li>support-tool security and audit logging.</li>
+</ul>
+<p>If Google-native settings cannot satisfy a mandatory control, select one compatible supplemental product or formally redesign the requirement. Avoid building a patchwork of multiple overlapping endpoint platforms.</p>
+<h3>4.5 Google Workspace data layer</h3>
+<p>Google Workspace remains the platform for:</p>
+<ul>
+<li>Gmail;</li>
+<li>Google Drive and shared drives;</li>
+<li>Google Docs and related Workspace applications;</li>
+<li>Google-based collaboration and communication.</li>
+</ul>
+<p>Required data controls:</p>
+<ul>
+<li>shared drives for business-owned data where appropriate;</li>
+<li>clear ownership and sharing boundaries;</li>
+<li>no business-critical data stored only on one PC;</li>
+<li>independent SaaS backup;</li>
+<li>documented retention, deletion, export, RPO, and RTO;</li>
+<li>periodic restore testing;</li>
+<li>documented provider-exit and administrative-recovery procedures.</li>
+</ul>
+<p>Drive for desktop synchronization is not a backup. Offline files and local caches must be treated as endpoint data and protected accordingly.</p>
+<h3>4.6 Office and other SaaS</h3>
+<p>Microsoft Office is delivered locally through the approved Microsoft 365 Business Premium baseline. If that baseline is waived, the business must provide and validate a separate Office license; Google Workspace does not provide Microsoft Office licensing.</p>
+<p>Other SaaS applications must be inventoried for:</p>
+<ul>
+<li>authentication and SSO support;</li>
+<li>account provisioning and suspension behavior;</li>
+<li>local-data location;</li>
+<li>licensing owner;</li>
+<li>backup and retention;</li>
+<li>dependency on AD security groups, LDAP, Kerberos, NTLM, mapped drives, or service accounts.</li>
+</ul>
+<p>GCPW provides Google-account Windows sign-in and Google-service SSO. It does not automatically provide SSO to every non-Google SaaS application.</p>
+<h3>4.7 Office network layer after AD DS retirement</h3>
+<p>The router/firewall should provide:</p>
+<ul>
+<li>DHCP scopes and reservations;</li>
+<li>DNS forwarding and local name-resolution rules;</li>
+<li>guest Wi-Fi isolation;</li>
+<li>outbound access required by Google, Microsoft, endpoint-security, backup, and support services;</li>
+<li>VPN or secure remote-support capability only if separately approved;</li>
+<li>firmware, administrator, and firewall-rule management.</li>
+</ul>
+<p>RDP, SMB, LDAP, and administrative services must not be exposed directly to the Internet. Any remaining requirement for domain DNS, file shares, certificates, or AD authentication blocks decommissioning until it is resolved.</p>
+<h3>4.8 Optional mobility branch</h3>
+<p>Remote work and secondary-device portability are not baseline requirements. If enabled, the user must use the same Google identity, 2-Step Verification, access policy, and offboarding controls. Managed corporate devices are preferred. BYOD requires explicit data-download, session, browser, and revocation controls. Direct inbound access to the office network is prohibited.</p>
+<h3>4.9 Microsoft 365 and Azure boundary</h3>
+<p>Microsoft 365 Business Premium with Teams is the common portfolio licensing baseline when Office, Defender for Business, and Microsoft cloud identity services are required. In addition to Entra ID P1-level controls and Intune Plan 1, it includes Office desktop/web/mobile applications, Exchange Online, Teams, SharePoint, OneDrive, Defender for Business, Defender for Office 365 Plan 1, and Purview information-protection/DLP capabilities. Copilot, Intune Plan 2/Suite, Entra ID P2, Azure consumption, Google Workspace, and independent backup are excluded from the baseline license price.</p>
+<p>For Solution 2, do not use Intune as a second Windows MDM alongside GCPW. If the common Business Premium baseline is waived, Entra ID Free plus a separately licensed Office/security profile is an approved exception only after documenting the reduced controls: no custom Conditional Access or device-compliance gates, limited self-service password-reset/writeback and enrollment paths, and fewer dynamic, risk, and governance capabilities.</p>
+<p>GCPW itself does not require Azure compute, Azure Virtual Desktop, an Azure VM, or an Azure subscription. If the company standard requires a company-owned Azure subscription for Microsoft governance, associate one with the same Microsoft Entra tenant, apply ownership/RBAC/budget/activity-log controls, and keep Azure resource consumption at zero unless a separate workload is approved. Azure VM jumpboxes, Azure Arc, Azure Monitor, and other Azure services remain optional add-ons and must not be introduced to solve a Google-first requirement without a documented benefit.</p>
+<h4>Optional Azure VM jumpbox or temporary remote server</h4>
+<p>Use a small hardened Azure VM only for a defined migration or administration purpose. Place it on a private subnet, administer it through Azure Bastion or an approved private VPN with Entra/MFA, do not expose Internet RDP/SSH, apply budgets and automatic shutdown, and remove it at the approved expiry date. This is not a general employee desktop or a replacement for GCPW.</p>
+<h4>Optional Azure Arc-enabled on-premises hosts</h4>
+<p>Use Azure Arc only for an on-premises host that must remain during transition or under an approved exception. Apply outbound-only connectivity, least-privilege RBAC, tags, policies, extension allowlists, and an offboarding date. Arc does not replace AD DS or make an on-premises host a cloud service; Update Manager, Monitor, Defender, Sentinel, guest configuration, and log ingestion may create separate charges.</p>
+<h2>5. User and administrator flows</h2>
+<h3>5.1 First GCPW sign-in and enrollment</h3>
+<p>See the detailed <a href="#user-sign-in-and-authentication-workflow">user sign-in and authentication workflow</a> in section 4.2. The operational sequence is:</p>
+<ol>
+<li>Confirm the PC is supported Windows 11 Pro and has Chrome installed.</li>
+<li>Install GCPW using the organization-specific package or an approved deployment method.</li>
+<li>Configure the allowed Workspace domain and enrollment token.</li>
+<li>User selects the GCPW work-account sign-in option.</li>
+<li>User authenticates with the managed Google Account and completes 2-Step Verification.</li>
+<li>GCPW creates or associates the approved Windows profile.</li>
+<li>If automatic enrollment is enabled, the device enrolls into Google Windows device management.</li>
+<li>Google Admin policies and applications synchronize.</li>
+<li>Administrator verifies device inventory, settings, application installation, endpoint security, encryption, and recovery controls.</li>
+</ol>
+<h3>5.2 Subsequent sign-in and offline behavior</h3>
+<p>After the first successful enrollment, the user signs in to the Windows profile normally. If the device is offline, local sign-in may continue until the configured GCPW validity period expires. A Google password change, session expiry, or suspicious-activity event can require a fresh Google sign-in. These cases must be tested with the actual PC image and policies.</p>
+<h3>5.3 New or rebuilt device</h3>
+<ol>
+<li>Verify Windows 11 compatibility, licensing, TPM/Secure Boot state, and hardware ownership.</li>
+<li>Back up and verify recovery of any local data.</li>
+<li>Reset or rebuild the device when practical; this is usually cleaner than retaining unknown domain-profile state.</li>
+<li>Install Chrome and GCPW with the organization token.</li>
+<li>Configure the permitted domain and automatic device-management enrollment.</li>
+<li>Complete the user’s Google sign-in and 2-Step Verification.</li>
+<li>Apply the Pilot or Standard organizational-unit policy.</li>
+<li>Deploy required applications and configure printers, scanners, webcams, Drive, and Office.</li>
+<li>Verify encryption, endpoint protection, local-admin control, updates, inventory, and recovery.</li>
+</ol>
+<p>If an existing profile must be retained, use a documented profile-association/data-migration method. GCPW does not automatically convert every AD domain profile into a clean Google-managed operating model.</p>
+<h3>5.4 Administrator flow</h3>
+<ol>
+<li>Administrator uses a separate Google super-admin or delegated admin account with 2-Step Verification.</li>
+<li>Administrative work is performed through Google Admin, backup, endpoint-security, firewall, and approved support portals.</li>
+<li>Local elevation uses the approved recovery or support process.</li>
+<li>Policy and application changes are tested in the Pilot organizational unit.</li>
+<li>Device, sign-in, application, threat, and backup status are reviewed on the agreed schedule.</li>
+</ol>
+<h3>5.5 Offboarding flow</h3>
+<ol>
+<li>Suspend the user’s Google Workspace account.</li>
+<li>Revoke sessions and tokens and remove group/application access.</li>
+<li>Block or retire the associated PC through the supported device-management action.</li>
+<li>Preserve or transfer business data according to the documented ownership and retention process.</li>
+<li>Recover company assets, local administrator information, and backup records.</li>
+</ol>
+<h3>5.6 Optional remote-work flow</h3>
+<p>This flow is used only if separately approved. The user connects from an approved managed device or controlled BYOD path, authenticates with Google and 2-Step Verification, and accesses Google Workspace and approved SaaS directly. Remote performance, browser/data controls, token revocation, and lost-device response must be tested before enablement.</p>
+<h2>6. Security and management baseline</h2>
+<table><thead><tr>
+<th>Control</th>
+<th>Baseline requirement</th>
+<th>Validation concern</th>
+</tr></thead><tbody>
+<tr>
+<td>Identity</td>
+<td>Individual Google Workspace accounts; no routine shared accounts</td>
+<td>Confirm ownership and recovery contacts</td>
+</tr>
+<tr>
+<td>Authentication</td>
+<td>2-Step Verification for users and administrators; FIDO2/passkeys where practical</td>
+<td>Test GCPW login and recovery behavior</td>
+</tr>
+<tr>
+<td>Administration</td>
+<td>Separate admin accounts and at least two emergency accounts</td>
+<td>Do not make both emergency accounts dependent on one policy or device</td>
+</tr>
+<tr>
+<td>GCPW domain restriction</td>
+<td>Only approved corporate domains may sign in</td>
+<td>A missing domain setting blocks GCPW sign-in</td>
+</tr>
+<tr>
+<td>Offline access</td>
+<td>Configure a finite online sign-in validity period</td>
+<td>Test Internet outage and expired validity behavior</td>
+</tr>
+<tr>
+<td>Account count</td>
+<td>One managed user per assigned PC unless a shared-device exception is approved</td>
+<td>Windows device management enrollment is limited per device</td>
+</tr>
+<tr>
+<td>Windows version</td>
+<td>Supported Windows 11 Pro or approved edition</td>
+<td>Windows 10 requires a documented retirement or temporary ESU plan</td>
+</tr>
+<tr>
+<td>Encryption</td>
+<td>BitLocker enabled and recovery keys escrowed</td>
+<td>Google-native key escrow must be proven or supplemented</td>
+</tr>
+<tr>
+<td>Endpoint security</td>
+<td>AV/EDR and firewall centrally enforced</td>
+<td>Do not assume GCPW is an EDR product</td>
+</tr>
+<tr>
+<td>Updates</td>
+<td>Windows quality/security updates within the approved deadline</td>
+<td>Confirm reporting and failed-update remediation</td>
+</tr>
+<tr>
+<td>Privilege</td>
+<td>Standard user and controlled elevation</td>
+<td>Confirm local-admin/password-rotation capability</td>
+</tr>
+<tr>
+<td>Applications</td>
+<td>Required MSI applications use documented URL, product ID, hash, and rollback</td>
+<td>Test non-MSI and complex application needs separately</td>
+</tr>
+<tr>
+<td>Inventory</td>
+<td>Devices and installed applications are reviewable</td>
+<td>Confirm reporting delay and completeness</td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>Independent Google Workspace and local-data backup</td>
+<td>Synchronization is not backup</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>Router/firewall DHCP/DNS, guest isolation, outbound-only cloud access</td>
+<td>No Internet-exposed RDP/SMB/LDAP</td>
+</tr>
+<tr>
+<td>Logging</td>
+<td>Google audit/investigation logs plus endpoint, backup, and firewall logs</td>
+<td>Define retention and review responsibility</td>
+</tr>
+</tbody></table>
+<h2>7. AD DS dependency-removal gate</h2>
+<p>The domain controller must not be demoted until evidence shows that:</p>
+<ul>
+<li>no application uses LDAP, Kerberos, NTLM, AD groups, domain service accounts, or domain membership;</li>
+<li>DNS has moved to the router/firewall or another approved design;</li>
+<li>DHCP has moved and reservations have been tested;</li>
+<li>file shares, mapped drives, and redirected folders have migrated or been retired;</li>
+<li>printers, scanners, and local peripherals work without domain-dependent credentials;</li>
+<li>certificate services and auto-enrollment dependencies are removed or replaced;</li>
+<li>VPN/RADIUS, scripts, scheduled tasks, Windows services, backup agents, and support tools no longer depend on AD DS;</li>
+<li>all users can sign in through GCPW and access Google Workspace, Office, communication tools, and required peripherals;</li>
+<li>the Google Workspace backup and a sample local-data restore have passed;</li>
+<li>the selected endpoint-security and privilege controls are active and reportable;</li>
+<li>rollback and stabilization criteria are satisfied.</li>
+</ul>
+<h2>8. Migration implementation plan</h2>
+<h3>Time estimate</h3>
+<p>The following is a planning estimate for six initial users and up to 10 Windows PCs. <strong>Effort</strong> is hands-on implementation labor; <strong>elapsed time</strong> includes user acceptance, vendor/licensing decisions, migration batches, change windows, and stabilization. The clean-environment total aligns with the <strong>30–46 hour</strong> budgetary range in section 10 and includes the common Microsoft 365 Business Premium licensing and tenant-foundation checks. Profile migration, supplemental endpoint controls, custom settings, MSI packaging, or application remediation can increase the effort to approximately <strong>42–62 hours</strong>.</p>
+<table><thead><tr>
+<th>Phase</th>
+<th>Effort</th>
+<th>Indicative elapsed time</th>
+</tr></thead><tbody>
+<tr>
+<td>Phase 0 — Discovery and feasibility</td>
+<td>4–6 hours</td>
+<td>2–5 business days</td>
+</tr>
+<tr>
+<td>Phase 1 — Google Workspace and Microsoft 365 foundation</td>
+<td>5–7 hours</td>
+<td>2–5 business days</td>
+</tr>
+<tr>
+<td>Phase 2 — GCPW and Windows-management pilot</td>
+<td>6–10 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 3 — Security and control-gap validation</td>
+<td>5–8 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 4 — Profile and data migration</td>
+<td>4–6 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 5 — Production rollout</td>
+<td>2–3 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 6 — Network and service migration</td>
+<td>2–3 hours</td>
+<td>3–5 business days</td>
+</tr>
+<tr>
+<td>Phase 7 — Stabilization and AD DS decommissioning</td>
+<td>2–3 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td><strong>Total implementation effort</strong></td>
+<td><strong>30–46 hours</strong></td>
+<td><strong>Approximately 5–9 weeks</strong></td>
+</tr>
+</tbody></table>
+<p>The elapsed range assumes one implementation owner working part time and does not include hardware procurement, licensing-approval delays, major application redevelopment, or ongoing managed support.</p>
+<h3>Phase 0 — Discovery and feasibility</h3>
+<ul>
+<li>inventory AD users, groups, computers, GPOs, DNS, DHCP, file, print, certificates, VPN/RADIUS, scripts, scheduled tasks, and service accounts;</li>
+<li>inventory each PC’s Windows edition/build, hardware, TPM/Secure Boot, applications, peripherals, local data, and current profile;</li>
+<li>confirm the Google Workspace edition and whether it supports GCPW with Windows device management;</li>
+<li>map every mandatory endpoint requirement to a Google-native control or a compatible supplemental control;</li>
+<li>confirm the six-user Microsoft 365 Business Premium with Teams baseline, or document the reduced-cost exception and its missing controls;</li>
+<li>confirm the company-owned Microsoft 365 tenant, verified domain, billing owner, and recovery contacts; if an Azure subscription is required by the company standard, confirm its association and governance boundary;</li>
+<li>confirm backup, endpoint-security, and support entitlements;</li>
+<li>record whether remote work and secondary-device portability are deferred or separately desired.</li>
+</ul>
+<p><strong>Exit criteria:</strong> no mandatory requirement remains marked “assumed,” and no incompatible third-party MDM is included.</p>
+<h3>Phase 1 — Google Workspace and Microsoft 365 foundation</h3>
+<ul>
+<li>verify the company domain and tenant ownership;</li>
+<li>establish named users, groups, organizational units, admin roles, and emergency accounts;</li>
+<li>provision or verify the company-owned Microsoft 365 tenant and assign six Microsoft 365 Business Premium with Teams licenses as the common baseline;</li>
+<li>do not add standalone Intune Plan 1 or Entra ID P1 licenses on top of Business Premium;</li>
+<li>if the Business Premium baseline is waived, record the Entra ID Free/standalone Office and security exception and its reduced-control impact;</li>
+<li>enforce 2-Step Verification and configure recovery methods;</li>
+<li>configure audit/investigation logging and administrator alerts;</li>
+<li>define shared-drive ownership and data-retention rules;</li>
+<li>select and configure independent Workspace backup.</li>
+</ul>
+<h3>Phase 2 — GCPW and Windows-management pilot</h3>
+<ul>
+<li>enable Windows device management for the Pilot organizational unit;</li>
+<li>configure permitted domains, enrollment token, automatic enrollment, account count, offline validity, and GCPW update behavior;</li>
+<li>install GCPW and Chrome on one non-critical PC;</li>
+<li>confirm first sign-in, subsequent sign-in, password change, offline sign-in, security-event reauthentication, device inventory, and policy synchronization;</li>
+<li>test one required MSI deployment and one custom setting;</li>
+<li>document rollback and device unenrollment behavior.</li>
+</ul>
+<h3>Phase 3 — Security and control-gap validation</h3>
+<ul>
+<li>verify BitLocker and recovery-key handling;</li>
+<li>verify AV/EDR, firewall, update enforcement, local-admin control, password rotation, and device retirement;</li>
+<li>add one compatible supplemental product only where a mandatory gap is proven;</li>
+<li>test Google Workspace backup and local endpoint backup;</li>
+<li>test printers, scanners, webcams, Drive for desktop, Office, and communications applications.</li>
+</ul>
+<h3>Phase 4 — Profile and data migration</h3>
+<ul>
+<li>back up each PC and verify the restore path;</li>
+<li>choose clean rebuild versus profile association based on pilot evidence;</li>
+<li>migrate approved local data and browser/application settings;</li>
+<li>validate Google Drive ownership, shared-drive access, local cache behavior, and offline files;</li>
+<li>document the user and device mapping.</li>
+</ul>
+<h3>Phase 5 — Production rollout</h3>
+<ul>
+<li>migrate one or two PCs per batch;</li>
+<li>assign Standard policies only after the pilot is accepted;</li>
+<li>maintain a migration ledger with user, PC, date, profile/data method, applications, and acceptance result;</li>
+<li>keep the AD server available for rollback until the stabilization period ends.</li>
+</ul>
+<h3>Phase 6 — Network and service migration</h3>
+<ul>
+<li>move DHCP and DNS to the router/firewall or approved managed service;</li>
+<li>migrate or retire file shares, print queues, certificates, VPN/RADIUS, scripts, scheduled tasks, and service accounts;</li>
+<li>verify normal operation from every production PC without AD connectivity.</li>
+</ul>
+<h3>Phase 7 — Stabilization and AD DS decommissioning</h3>
+<ul>
+<li>review Google, endpoint-security, backup, device, and network alerts;</li>
+<li>execute a controlled domain-controller shutdown test;</li>
+<li>resolve any critical dependency before demotion;</li>
+<li>demote and remove AD DS only after the gate passes;</li>
+<li>retain the approved backup and finalize operating documentation.</li>
+</ul>
+<h3>Optional value-add work packages</h3>
+<p>The following work is excluded from the <strong>30–46 hour</strong> baseline and is performed only after separate approval. GCPW-managed Windows devices must not be moved to Intune or Windows Autopilot as an incremental feature; that would be a control-plane change requiring a new design and pilot.</p>
+<ul>
+<li><strong>SharePoint/Teams operating hub:</strong> create a small Microsoft 365 hub for procedures, templates, forms, or Microsoft-owned content; plan approximately <strong>6–12 additional hours</strong>, with a documented relationship to Google Shared drives.</li>
+<li><strong>Power Automate standard workflow:</strong> automate a lightweight approval, reminder, onboarding, or exception process using approved standard connectors; plan approximately <strong>2–4 additional hours per workflow</strong>. Premium connectors, Google integrations, gateways, RPA, and AI Builder require separate licensing review.</li>
+<li><strong>Microsoft 365 Copilot Chat enablement:</strong> review sharing/privacy settings, publish safe-use guidance, and run a short web-based pilot; plan approximately <strong>2–4 additional hours</strong>.</li>
+<li><strong>Microsoft 365 Copilot pilot:</strong> assign the separate add-on to one or two users, validate Microsoft 365 data permissions, train users, and measure outcomes; plan approximately <strong>4–8 additional hours</strong>, excluding license fees. It does not ground on Google Workspace data by default.</li>
+<li><strong>Copilot Studio internal FAQ agent:</strong> curate a controlled source, build the agent, configure authentication and escalation, test answers, and document ownership; plan approximately <strong>8–16 additional hours</strong>, excluding usage or license fees.</li>
+<li><strong>Mobile application management:</strong> control approved Microsoft mobile applications for BYOD or remote work without managing the personal device; plan approximately <strong>4–8 additional hours</strong>. This does not replace GCPW for Windows PCs.</li>
+<li><strong>Azure VM jumpbox/temporary remote server:</strong> if a specific administrative or migration need exists, configure a private, time-limited VM with Bastion/VPN, Entra/MFA/RBAC, budgets, shutdown, and removal controls; plan approximately <strong>6–12 additional hours</strong>, excluding Azure consumption.</li>
+<li><strong>Azure Arc-enabled retained host:</strong> if a specific on-premises host must remain, install and govern the Connected Machine agent, enable only approved extensions, test management actions, and document offboarding; plan approximately <strong>4–8 additional hours</strong> for one to three simple hosts, excluding service consumption.</li>
+</ul>
+<h3>Implementation deliverables and completed end state</h3>
+<p>After rollout and stabilization, the selected Solution 2 implementation will deliver:</p>
+<table><thead><tr>
+<th>Deliverable</th>
+<th>Completed outcome</th>
+</tr></thead><tbody>
+<tr>
+<td>Google identity and Windows control plane</td>
+<td>Company-owned Google Workspace identity, GCPW, Google Windows device-management policies, organizational units, enrollment, offline-validity, and tested recovery procedures</td>
+</tr>
+<tr>
+<td>Common Microsoft platform baseline</td>
+<td>Six Microsoft 365 Business Premium with Teams licenses, where approved, with Office, Defender, Entra tenant ownership, and documented non-use of Intune as a competing MDM</td>
+</tr>
+<tr>
+<td>Managed Windows estate</td>
+<td>Up to 10 supported Windows 11 PCs with tested encryption, endpoint security, updates, standard-user controls, application deployment, inventory, and recovery</td>
+</tr>
+<tr>
+<td>Data protection</td>
+<td>Google Shared drive ownership, independent Workspace backup, local endpoint backup, retention, RPO/RTO, restore evidence, and provider-exit procedures</td>
+</tr>
+<tr>
+<td>AD DS retirement</td>
+<td>DNS/DHCP and other dependencies transferred or remediated; domain controller demoted and retired after the dependency gate</td>
+</tr>
+<tr>
+<td>Optional value-adds, if approved</td>
+<td>SharePoint/Teams hub, workflows, Copilot guidance/pilot, FAQ-agent ownership, MAM, or approved Azure governance/hybrid add-on evidence</td>
+</tr>
+<tr>
+<td>Handover package</td>
+<td>Architecture, configuration register, migration ledger, control-gap exceptions, runbooks, support contacts, cost/license register, rollback record, and acceptance sign-off</td>
+</tr>
+</tbody></table>
+<h2>9. Operating model</h2>
+<h3>Routine operations</h3>
+<ul>
+<li>review Google sign-in, audit, device, application, endpoint-security, and backup alerts;</li>
+<li>process joiners, movers, and leavers through documented checklists;</li>
+<li>review stale devices and failed policy/application sync;</li>
+<li>review GCPW and Chrome versions after pilot validation;</li>
+<li>review license assignments and backup status monthly;</li>
+<li>perform periodic restore tests;</li>
+<li>review emergency accounts and recovery contacts.</li>
+</ul>
+<h3>Change management</h3>
+<ul>
+<li>pilot every GCPW, Windows custom setting, MSI package, and supplemental-agent change;</li>
+<li>record the OMA-URI, value, scope, owner, test result, and rollback action;</li>
+<li>avoid policy duplication between Google and any supplemental product;</li>
+<li>remove obsolete settings and licenses;</li>
+<li>do not use unsupported custom settings as an undocumented substitute for a security product.</li>
+</ul>
+<h3>Support model</h3>
+<p>The environment should be supportable by a part-time internal owner or qualified external administrator. Remote administration is required for operational efficiency; employee remote work is optional. Direct exposure of Windows administrative services to the Internet is prohibited.</p>
+<h2>10. Licensing and cost model</h2>
+<p>The Google Workspace edition must be confirmed before approving this option. Google’s current documentation distinguishes standalone GCPW support from GCPW combined with Windows device management. The combined feature is edition-dependent and includes Business Plus, selected Enterprise, Enterprise Essentials, and Cloud Identity Premium editions; the exact entitlement must be verified against the current tenant and quote.</p>
+<h3>Common baseline and Google-first exception profile</h3>
+<p>The common portfolio baseline is six Microsoft 365 Business Premium with Teams licenses. In Solution 2, Business Premium supplies Office, Defender for Business, and the Microsoft tenant/licensing boundary; Google Workspace remains authoritative for identity, GCPW sign-in, Google collaboration, and Google Windows device management. Intune is included in the license but is not activated as a competing Windows MDM.</p>
+<p>If the business wants the lowest possible Google-first cost, it may waive the common Microsoft baseline and use separately licensed Office and compatible endpoint-security tools. That is a documented exception profile, not the portfolio baseline, and its missing controls and license coverage must be recorded.</p>
+<h3>Baseline and optional subscription profile</h3>
+<table><thead><tr>
+<th>Baseline or optional item</th>
+<th>Current planning price</th>
+<th>Six-user planning cost</th>
+<th>Scope and notes</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Business Premium with Teams <em>(common baseline)</em></td>
+<td><strong>CAD 29.80/user/month</strong>, annual commitment</td>
+<td><strong>CAD 178.80/month</strong> or <strong>CAD 2,145.60/year</strong></td>
+<td>Provides Office, Defender for Business, Entra ID P1-level controls, and Intune Plan 1. Intune is not used as the GCPW Windows control plane. Copilot is excluded.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Business Premium without Teams <em>(optional)</em></td>
+<td><strong>CAD 25.50/user/month</strong>, annual commitment</td>
+<td><strong>CAD 153.00/month</strong> or <strong>CAD 1,836.00/year</strong></td>
+<td>Use only when Teams is not required and the no-Teams profile is approved.</td>
+</tr>
+<tr>
+<td>Microsoft Entra ID Free <em>(optional exception)</em></td>
+<td><strong>CAD 0/user/month</strong></td>
+<td><strong>CAD 0/month</strong></td>
+<td>Reduced-control Microsoft identity profile; not a replacement for Google Workspace identity or GCPW.</td>
+</tr>
+<tr>
+<td>Optional Google Workspace edition with GCPW/device management</td>
+<td><strong>Optional; price excluded</strong></td>
+<td><strong>CAD 0 included cost</strong></td>
+<td>Required entitlement if Solution 2 is selected, but the Google license fee is excluded from this comparison calculation. Confirm the edition before procurement.</td>
+</tr>
+<tr>
+<td>Azure subscription <em>(optional governance boundary)</em></td>
+<td><strong>No fixed subscription fee; pay-as-you-go for Azure resources</strong></td>
+<td><strong>CAD 0 fixed</strong></td>
+<td>Not required by GCPW. If created under the company standard, keep Azure resources at zero unless separately approved.</td>
+</tr>
+<tr>
+<td>Independent Google Workspace and endpoint backup</td>
+<td><strong>CAD 50–100/month planning allowance</strong></td>
+<td><strong>CAD 50–100/month</strong></td>
+<td>Required independent backup; synchronization is not backup.</td>
+</tr>
+<tr>
+<td>Supplemental endpoint-security/RMM/privilege tooling</td>
+<td><strong>Separate quote</strong></td>
+<td><strong>Excluded</strong></td>
+<td>Add only where Google-native controls fail a mandatory requirement.</td>
+</tr>
+</tbody></table>
+<p>The Google Workspace fee is excluded from the model, but the required Google entitlement cannot be omitted from an actual Solution 2 deployment. Add its price back if it is not already funded or covered by the approved commercial assumption.</p>
+<h3>Microsoft 365 Business Premium included services</h3>
+<p>In addition to Entra ID P1-level controls and Intune Plan 1, the common Business Premium with Teams baseline includes Office desktop/web/mobile applications, Exchange Online, Teams, SharePoint, OneDrive, Defender for Business, Defender for Office 365 Plan 1, Purview information protection/DLP, and related productivity services. These services are available for approved use, but Solution 2 must not duplicate Google Workspace repositories or identity workflows without a documented purpose.</p>
+<h3>Cost discipline</h3>
+<ul>
+<li>do not upgrade or change the Google Workspace edition solely by assumption; verify the GCPW/device-management entitlement;</li>
+<li>do not purchase standalone Intune Plan 1 or Entra ID P1 on top of Business Premium;</li>
+<li>do not purchase a second MDM/UEM product that conflicts with GCPW;</li>
+<li>do not treat Google Drive synchronization as backup;</li>
+<li>price endpoint security, local-admin control, patch reporting, support tooling, and backup separately;</li>
+<li>treat Copilot, Copilot Studio, premium Power Automate connectors, Azure monitoring, Arc, and VM consumption as optional add-ons;</li>
+<li>identify the incremental cost of optional mobility or BYOD separately.</li>
+</ul>
+<p>Entra ID Free has no separate per-user fee, but it lacks custom Conditional Access and device-compliance gates, some self-service password-reset/writeback and enrollment paths, dynamic groups, and advanced risk/governance controls. It is not required for Google-first identity and should be treated as a Microsoft-side exception only.</p>
+<h3>Budgetary effort</h3>
+<p>For a clean 10-device environment with simple applications, budget approximately <strong>30–46 implementation hours</strong>. Allow approximately <strong>42–62 hours</strong> when profile migration, custom OMA-URI settings, MSI packaging, application remediation, or supplemental endpoint tooling is required. This excludes major hardware replacement, formal compliance work, complex application redevelopment, and ongoing managed support.</p>
+<h3>Main cost drivers</h3>
+<ul>
+<li>Microsoft 365 Business Premium with Teams as the common baseline;</li>
+<li>optional Google Workspace edition or provisioning changes; its license fee is excluded from the comparison calculation;</li>
+<li>endpoint-security/EDR;</li>
+<li>independent Google Workspace and endpoint backup;</li>
+<li>local-administrator/password-rotation or patching tooling;</li>
+<li>remote-support tooling;</li>
+<li>Windows 11 hardware replacement;</li>
+<li>optional mobility or BYOD controls.</li>
+</ul>
+<h3>Standard deployment, operational, and maintenance budget</h3>
+<p>For a comparable six-user/10-device planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, endpoint-tooling, and backup cost and excludes support labor. “Maintenance” is routine administration at <strong>CAD 125–150/hour</strong> and excludes incidents, major projects, hardware replacement, and vendor support contracts.</p>
+<table><thead><tr>
+<th>Cost category</th>
+<th>Standard planning amount</th>
+</tr></thead><tbody>
+<tr>
+<td>One-time deployment</td>
+<td><strong>CAD 3,750–6,900</strong> for 30–46 hours; profile migration, custom settings, application packaging, or supplemental tooling can increase this range.</td>
+</tr>
+<tr>
+<td>Recurring operational cost</td>
+<td><strong>CAD 228.80–278.80/month</strong> for the common Microsoft 365 Business Premium with Teams baseline plus independent backup. Google Workspace is required if Solution 2 is selected but its license fee is excluded from this calculation; supplemental endpoint/RMM tooling is also excluded.</td>
+</tr>
+<tr>
+<td>Routine maintenance</td>
+<td><strong>CAD 375–900/month</strong> for approximately 3–6 hours of endpoint inventory, GCPW/device-policy review, patch and security review, onboarding/offboarding, backup checks, and recovery testing.</td>
+</tr>
+<tr>
+<td>Excluded or optional items</td>
+<td>Google Workspace license fee, Copilot, Copilot Studio, premium Power Automate, supplemental endpoint/RMM tools, Azure consumption, hardware replacement, Internet service, optional dual-WAN/5G or UPS, major application work, incident response, and vendor support contracts.</td>
+</tr>
+</tbody></table>
+<p>Optional value-adds are excluded from the maintenance range. For one to three lightweight capabilities such as a SharePoint hub, standard workflows, MAM, or a Copilot pilot, allow approximately <strong>1–3 additional hours/month</strong> for ownership, content, exception, and usage review.</p>
+<h3>Optional Azure add-on cost treatment</h3>
+<table><thead><tr>
+<th>Optional add-on</th>
+<th>Cost treatment and planning rule</th>
+</tr></thead><tbody>
+<tr>
+<td>Azure VM jumpbox or temporary remote server</td>
+<td>No fixed license line; add VM compute, disks, network, Bastion/VPN, backup, monitoring, and log-ingestion consumption. Use automatic shutdown and delete the resources at expiry.</td>
+</tr>
+<tr>
+<td>Azure Arc-enabled on-premises hosts</td>
+<td>Basic Arc connection and Azure resource organization are generally offered at no additional charge; Update Manager, Monitor, Defender, Sentinel, guest configuration, Windows Server pay-as-you-go, log ingestion, and storage may add per-server or consumption charges.</td>
+</tr>
+</tbody></table>
+<p>These Azure add-ons are excluded from the <strong>CAD 228.80–278.80/month</strong> Google-first comparison baseline and the <strong>30–46 hour</strong> implementation estimate.</p>
+<h2>11. Comparison with the other proposed solutions</h2>
+<p>The comparison uses the updated requirements, where remote work and user/device portability are optional.</p>
+<table><thead><tr>
+<th>Criterion</th>
+<th>Solution 1: Entra ID + Intune</th>
+<th>Solution 2: Google + GCPW</th>
+<th>Solution 3: AVD</th>
+</tr></thead><tbody>
+<tr>
+<td>Authoritative identity</td>
+<td>Entra ID</td>
+<td>Google Workspace</td>
+<td>Entra ID, with hosted desktops</td>
+</tr>
+<tr>
+<td>Windows sign-in</td>
+<td>Native Entra join</td>
+<td>GCPW Google-account sign-in</td>
+<td>Hosted-session sign-in</td>
+</tr>
+<tr>
+<td>Windows endpoint depth</td>
+<td>Strongest native Windows control</td>
+<td>Conditional; feature coverage must be tested</td>
+<td>Strong for session hosts, but terminals also need management</td>
+</tr>
+<tr>
+<td>Google Workspace alignment</td>
+<td>Good through SAML/provisioning</td>
+<td>Best native alignment</td>
+<td>Indirect and more complex</td>
+</tr>
+<tr>
+<td>Local Windows productivity</td>
+<td>Preserved</td>
+<td>Preserved</td>
+<td>Not the primary model</td>
+</tr>
+<tr>
+<td>Application deployment</td>
+<td>Broad Intune packaging and policy model</td>
+<td>MSI/custom-setting model; validate non-MSI apps</td>
+<td>Centralized image/app model</td>
+</tr>
+<tr>
+<td>Privilege, EDR, recovery</td>
+<td>More complete when licensed</td>
+<td>May require supplemental products</td>
+<td>Requires host, profile, and terminal controls</td>
+</tr>
+<tr>
+<td>MDM compatibility</td>
+<td>Native Microsoft stack</td>
+<td>GCPW conflicts with third-party MDM/UEM</td>
+<td>Separate AVD/endpoint management stack</td>
+</tr>
+<tr>
+<td>Simplicity</td>
+<td>Moderate</td>
+<td>Lowest if requirements are basic</td>
+<td>Lowest</td>
+</tr>
+<tr>
+<td>Recurring cost</td>
+<td>Moderate</td>
+<td>Potentially lowest when Google and supplemental controls are already funded</td>
+<td>Highest and consumption-sensitive</td>
+</tr>
+<tr>
+<td>Office Internet outage</td>
+<td>Some local productivity can continue</td>
+<td>Some local productivity can continue after sign-in</td>
+<td>Hosted work may be unavailable</td>
+</tr>
+<tr>
+<td>Optional remote work</td>
+<td>Supported if enabled</td>
+<td>Supported if enabled and controlled</td>
+<td>Strong capability but not baseline-required</td>
+</tr>
+<tr>
+<td>Suitability for this baseline</td>
+<td><strong>Preferred for Windows control</strong></td>
+<td><strong>Conditional low-cost alternative</strong></td>
+<td><strong>Exception only</strong></td>
+</tr>
+</tbody></table>
+<h3>When Solution 2 is appropriate</h3>
+<p>Select this option only if the pilot proves that:</p>
+<ul>
+<li>the existing or approved Google edition includes the required Windows-management features;</li>
+<li>all mandatory endpoint controls are available or covered by one compatible supplemental product;</li>
+<li>GCPW’s third-party-MDM incompatibility is acceptable;</li>
+<li>no application requires AD DS, LDAP, Kerberos, NTLM, domain membership, or mapped-drive dependencies;</li>
+<li>Office, Drive, printers, scanners, and communications tools work reliably;</li>
+<li>the organization accepts Google Admin as the primary Windows-management console;</li>
+<li>the lower cost and Google alignment justify the weaker Windows-management depth relative to Intune.</li>
+</ul>
+<h3>Why Solution 1 remains stronger for risk reduction</h3>
+<p>The mandatory baseline requires centrally enforced encryption, security, updates, privilege control, application repeatability, inventory, device actions, and reporting. Intune is designed around those Windows controls. Solution 2 may satisfy them, but the organization must prove more through testing and may need additional products.</p>
+<h3>When AVD should be selected instead</h3>
+<p>AVD should be considered only when a legacy application, centralized desktop requirement, terminal-only PC model, minimized local data, or approved mobility requirement justifies its additional infrastructure and administration.</p>
+<h2>12. Risks and mitigations</h2>
+<table><thead><tr>
+<th>Risk</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr></thead><tbody>
+<tr>
+<td>GCPW is mistaken for a complete AD/GPO replacement</td>
+<td>Missing Windows controls or hidden dependencies</td>
+<td>Map every mandatory requirement to a tested control</td>
+</tr>
+<tr>
+<td>Required Windows-management feature is not included in the current edition</td>
+<td>Rework or unexpected licensing cost</td>
+<td>Confirm edition entitlement before pilot</td>
+</tr>
+<tr>
+<td>Third-party MDM is introduced alongside GCPW</td>
+<td>Enrollment or policy conflict</td>
+<td>Do not deploy another MDM/UEM without explicit compatibility evidence</td>
+</tr>
+<tr>
+<td>GCPW first sign-in requires Internet</td>
+<td>New or rebuilt users cannot sign in during an outage</td>
+<td>Keep a controlled recovery process and test offline behavior</td>
+</tr>
+<tr>
+<td>Offline validity is indefinite or too short</td>
+<td>Security exposure or user lockout</td>
+<td>Configure and test a finite validity period</td>
+</tr>
+<tr>
+<td>Local-admin, BitLocker, EDR, or patch controls are incomplete</td>
+<td>Endpoint compromise or recovery failure</td>
+<td>Add one compatible supplemental control or reject the option</td>
+</tr>
+<tr>
+<td>MSI/custom-setting deployment is insufficient</td>
+<td>Applications cannot be installed or updated consistently</td>
+<td>Inventory app types and pilot packaging before selection</td>
+</tr>
+<tr>
+<td>Existing AD profile is retained incorrectly</td>
+<td>Data loss, duplicate profile, or permissions problems</td>
+<td>Prefer clean rebuild or use a tested profile-association process</td>
+</tr>
+<tr>
+<td>Google password reset behavior is misunderstood</td>
+<td>Windows sign-in or user recovery failure</td>
+<td>Document and test reset, security-event, and emergency flows</td>
+</tr>
+<tr>
+<td>Google Drive is treated as backup</td>
+<td>Data cannot be restored after deletion or corruption</td>
+<td>Use independent backup and sample restores</td>
+</tr>
+<tr>
+<td>Optional mobility expands scope</td>
+<td>More cost and security exposure</td>
+<td>Separate approval, budget, owner, and acceptance test</td>
+</tr>
+<tr>
+<td>Business Premium and Google create duplicate identity or collaboration paths</td>
+<td>Higher cost, conflicting ownership, or user confusion</td>
+<td>Keep Google authoritative for GCPW and Google data, assign Business Premium only for approved Microsoft services, and document the source of truth</td>
+</tr>
+<tr>
+<td>Intune or Autopilot is layered onto GCPW without a control-plane decision</td>
+<td>Device enrollment or policy conflict</td>
+<td>Keep Google device management as the Windows control plane or formally redesign and repilot the solution</td>
+</tr>
+<tr>
+<td>Copilot or a chatbot uses overshared or inaccurate information</td>
+<td>Confidentiality risk or incorrect business advice</td>
+<td>Review Microsoft 365 permissions, use curated sources, require human review, and assign an owner and escalation path</td>
+</tr>
+<tr>
+<td>Optional workflows or Azure services become unsupported</td>
+<td>Silent failures, cost growth, or fragmented support</td>
+<td>Use standard connectors first, add owners and alerts, set budgets, and review optional services monthly</td>
+</tr>
+</tbody></table>
+<h2>13. Acceptance criteria</h2>
+<p>The design is accepted only when:</p>
+<ul>
+<li>all production users can sign in to supported Windows 11 PCs through GCPW;</li>
+<li>the approved Microsoft 365 Business Premium with Teams baseline is assigned, or the reduced-cost exception documents Office, identity, security, and missing-control impacts;</li>
+<li>2-Step Verification and emergency-account recovery have been tested;</li>
+<li>all retained PCs are inventoried and show the expected management state;</li>
+<li>encryption, endpoint security, firewall, updates, local-admin controls, and recovery keys are active and reportable;</li>
+<li>required Google Workspace, Office, communication, printing, scanning, and peripheral workflows pass user acceptance;</li>
+<li>required applications are repeatably installed and updated, or a documented compatible supplemental tool is approved;</li>
+<li>user and shared data ownership is correct, independent backup is active, and sample restoration passes;</li>
+<li>onboarding, offboarding, device replacement, and support procedures are documented and tested;</li>
+<li>DNS, DHCP, file, print, certificate, VPN, RADIUS, LDAP, Kerberos, NTLM, script, scheduled-task, and service-account dependencies are replaced or proven unused;</li>
+<li>no Internet-exposed RDP, SMB, LDAP, or administrative service is required;</li>
+<li>if a company-owned Azure subscription is created, it is associated with the approved Microsoft Entra tenant and has ownership, RBAC, budget, alert, policy, and activity-log controls tested;</li>
+<li>rollback and stabilization criteria are satisfied;</li>
+<li>the domain controller is demoted cleanly and retained backups meet the approved policy;</li>
+<li>recurring cost and supplemental-tool count remain within the approved limits;</li>
+<li>any approved SharePoint/Teams hub, workflow, Copilot, FAQ agent, MAM, or Azure add-on has an owner, acceptance evidence, cost boundary, and support procedure;</li>
+<li>remote work and user/device portability are tested only if separately enabled; they are not baseline acceptance conditions.</li>
+</ul>
+<h2>14. Decisions required before implementation</h2>
+<ul>
+<li>Confirm Google Workspace as the authoritative workforce identity.</li>
+<li>Confirm the current Google Workspace edition and GCPW-with-Windows-management entitlement.</li>
+<li>Approve six Microsoft 365 Business Premium with Teams licenses as the common Microsoft baseline, or approve the reduced-cost exception and document its limitations.</li>
+<li>If an Azure subscription is created for portfolio governance, approve its company ownership, tenant association, billing owner, RBAC, budget, resource scope, and support contacts.</li>
+<li>Decide whether Windows device management will be enabled for all devices or only selected organizational units.</li>
+<li>Confirm the GCPW domain restriction, offline validity period, automatic enrollment, and one-user-per-PC policy.</li>
+<li>Confirm the exact controls available for BitLocker, AV/EDR, firewall, updates, local-admin rotation, device actions, inventory, and application deployment.</li>
+<li>Decide whether one compatible supplemental endpoint-security or RMM product is required.</li>
+<li>Confirm Microsoft Office licensing and deployment method.</li>
+<li>Confirm independent Google Workspace and endpoint backup.</li>
+<li>Decide whether Google Workspace or Microsoft 365 is authoritative for each content category before enabling work-grounded Copilot or a knowledge agent.</li>
+<li>Approve any optional SharePoint/Teams hub, standard workflows, Copilot pilot, Copilot Studio agent, MAM, or Azure governance/hybrid add-on with a named owner and success measure.</li>
+<li>Confirm Windows 11 compatibility and replacement schedule for every PC.</li>
+<li>Confirm router/firewall ownership of DHCP and DNS after AD DS retirement.</li>
+<li>Confirm every file, print, certificate, VPN/RADIUS, script, scheduled-task, and service-account dependency.</li>
+<li>Decide whether remote work, BYOD, or secondary-device portability is deferred or separately enabled.</li>
+<li>Approve the monthly operating-cost ceiling, implementation effort range, RTO, RPO, rollback window, and stabilization period.</li>
+</ul>
+<h2>15. References</h2>
+<ul>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/install-google-credential-provider-for-windows">Install Google Credential Provider for Windows</a></li>
+<li><a href="https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium">Microsoft 365 Business Premium pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-chat-requirements">Microsoft 365 Copilot Chat requirements</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-licensing">Microsoft Copilot licensing options</a></li>
+<li><a href="https://learn.microsoft.com/en-us/power-platform/admin/power-automate-licensing/types">Power Automate licensing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-messages-management">Copilot Studio billing and consumption</a></li>
+<li><a href="https://learn.microsoft.com/en-us/defender-business/mdb-overview">Microsoft Defender for Business overview</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/fundamentals/how-subscriptions-associated-directory">Azure subscription and Microsoft Entra tenant relationship</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/bastion/">Azure Bastion documentation</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/azure-arc/servers/overview">Azure Arc-enabled servers overview</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/update-manager/overview">Azure Update Manager overview</a></li>
+<li><a href="https://azure.microsoft.com/en-us/pricing/details/azure-arc/core-control-plane/">Azure Arc pricing</a></li>
+<li><a href="https://workspace.google.com/intl/en_ca/business/">Google Workspace pricing in Canada</a></li>
+<li><a href="https://support.google.com/a/users/answer/9250915?hl=en">Sign in to Windows after GCPW installation</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/enable-windows-device-management">Enable Windows device management</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/device-requirements-for-google-endpoint-management">Device requirements for Google endpoint management</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/add-edit-or-delete-custom-settings-for-windows-10-or-11-devices">Custom settings for Windows 10 or 11 devices</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/install-apps-on-windows-10-or-11-devices-with-custom-settings">Install apps on Windows devices with custom settings</a></li>
+<li><a href="https://workspaceupdates.googleblog.com/2026/07/google-credential-provider-for-windows-now-supports-FIDO2-compliant-physical-security-keys-as-a-second-factor-for-authentication.html">GCPW FIDO2 security-key support</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/well-architected/pillars">Azure Well-Architected Framework pillars</a></li>
+<li><a href="https://support.microsoft.com/en-us/windows/deployment/updates-lifecycle/windows-10-support-has-ended-on-october-14-2025">Windows 10 support lifecycle</a></li>
+</ul>
+
+    </div>
+  </article>
+</main>
+
+  <script src="../../site.js?v=639257110262405759" defer></script>
+</body>
+</html>

@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- GENERATED_DOCUMENTATION_SITE -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture and requirements guidance for moving a small-business Windows environment from on-premises Active Directory to cloud-native identity, endpoint, and desktop services.">
+  <meta name="color-scheme" content="light dark">
+  <title>Solution 3 — Azure Virtual Desktop (AVD) with Office PCs as Access Terminals · Cloud Migration Demo</title>
+  <link rel="stylesheet" href="../../styles.css?v=639257110262405759">
+</head>
+<body data-index-path="../../index.html">
+  <header class="topbar">
+    <nav class="global-nav" aria-label="Primary">
+      <a href="https://andyxuan.ca/">Home</a>
+      <a href="https://andyxuan.ca/docs/">▤ Library</a>
+      <a href="https://github.com/andyxuan2010/cloud-migration-demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+    <a class="brand" href="../../index.html" aria-label="Documentation home">
+      <span class="brand-mark" aria-hidden="true">CM</span>
+      <span class="brand-text">Cloud Migration Demo <small>CCOE Azure documentation</small></span>
+    </a>
+    <div class="header-tools">
+      <div class="language-switch" aria-label="Language selection">
+        <span class="active" aria-current="true">EN</span>
+        <span aria-disabled="true">FR</span>
+        <span aria-disabled="true">中</span>
+      </div>
+      <button class="icon-button" id="themeButton" type="button" aria-label="Toggle dark mode" title="Toggle color theme">◐</button>
+    </div>
+  </header>
+
+  <main class="reader-view">
+  <div class="reader-navigation">
+    <a class="back-button" href="../../index.html">← All documents</a>
+    <span class="reader-path">docs/10-architecture/azure-virtual-desktop-architecture.md</span>
+  </div>
+  <article class="reader">
+    <div class="reader-tools">
+      <span class="file-label">docs/10-architecture/azure-virtual-desktop-architecture.md</span>
+      <a class="github-link" href="https://github.com/andyxuan2010/cloud-migration-demo/blob/main/docs/10-architecture/azure-virtual-desktop-architecture.md" target="_blank" rel="noopener">View source on GitHub ↗</a>
+    </div>
+    <div class="markdown-body">
+    <h2>Detailed architecture design, analysis, and comparison</h2>
+<p><strong>Design scope:</strong> 10 Windows PCs, six initial users, currently joined to on-premises AD DS, Google Workspace as the selected/retained SaaS platform when used, Microsoft Office, communication tools, and retirement of the local domain controller.</p>
+<p><strong>Document relationship:</strong> The authoritative baseline is <a href="../90-decisions/requirements.html"><code>requirements.md</code></a>. Remote work and user/device portability are optional; identity security, endpoint recovery, data ownership, application continuity, and AD dependency removal remain mandatory.</p>
+<h2>1. Executive decision</h2>
+<p>Azure Virtual Desktop (AVD) is technically valid, but it should remain a conditional or exception architecture for this small-business environment. It moves the Windows desktop and application workload from the office PCs into Azure. The existing PCs become access terminals that display a remote Windows session rather than running the main business desktop locally.</p>
+<p>AVD is justified when one or more of the following are confirmed business requirements:</p>
+<ul>
+<li>every user must receive the same centrally managed Windows desktop and application set;</li>
+<li>a legacy Windows application must run in one controlled environment;</li>
+<li>business data should remain primarily in a central cloud desktop rather than on office PCs;</li>
+<li>users need a consistent desktop from multiple approved locations or devices;</li>
+<li>the office PCs should be inexpensive terminals with a longer replacement cycle; or</li>
+<li>a demonstrated security, support, or compliance benefit outweighs the added Azure consumption and operational work.</li>
+</ul>
+<p>If the business mainly needs to remove AD DS while retaining 10 capable PCs, Entra ID + Intune remains the simpler and lower-risk baseline. AVD adds a host-pool lifecycle, image management, profile storage, Azure networking, session troubleshooting, licensing validation, Internet dependency, and consumption-cost control. Those components must be accepted as a deliberate trade-off rather than introduced merely as an AD replacement.</p>
+<p>The preferred AVD target is:</p>
+<ul>
+<li>Microsoft Entra ID as the authoritative cloud identity;</li>
+<li>six Microsoft 365 Business Premium with Teams licenses as the baseline user subscription for AVD, including Entra ID P1-level controls, Intune Plan 1, Office, Teams, and Defender for Business;</li>
+<li>Entra-joined Windows 11 Enterprise multi-session session hosts;</li>
+<li>a pooled host pool, normally with one host for a pilot and two or more hosts for production availability;</li>
+<li>one AVD workspace and desktop application group for the initial user population;</li>
+<li>a standardized golden image containing Office, Chrome, Google Workspace access, communication tools, and approved line-of-business applications;</li>
+<li>FSLogix profile containers on Azure Files using the supported Microsoft Entra Kerberos cloud-only identity path, subject to a pilot validation of permissions, region, and application behavior;</li>
+<li>Azure autoscale, budgets, alerts, monitoring, and a documented image replacement process;</li>
+<li>office firewall egress to Microsoft and Google cloud services, with no inbound RDP and no public IP addresses on session hosts;</li>
+<li>Intune and Defender for Business controls where the baseline license and operating model justify them; Defender for Cloud and other server-security services remain optional add-ons; and</li>
+<li>optional remote access only after the business approves the mobility scope, device policy, and incremental cost.</li>
+</ul>
+<p>Microsoft documents that Entra-joined session hosts can remove the need for line-of-sight to an on-premises domain controller or Entra Domain Services. AVD also uses reverse-connect transport, so the normal design does not expose an inbound RDP listener. The exact license entitlement, Azure Files authentication model, and profile behavior must still be validated before production approval.</p>
+<p>The Microsoft 365 Business Premium with Teams subscription is the commercial baseline for this solution, not an additive purchase on top of standalone Intune Plan 1 or Entra ID P1. Google Workspace remains an optional/retained collaboration platform and its license fee is excluded from the cost calculation. AVD Azure resources, independent backup, Copilot, Intune Plan 2/Suite, Entra ID P2, and other Azure security or monitoring services remain separately priced.</p>
+<h2>2. Architecture diagram</h2>
+<p><img src="../images/azure_virtual_desktop_target_architecture.png" alt="Azure Virtual Desktop target architecture" loading="lazy"></p>
+<p>Blue paths are normal identity, management, session, and data flows. Orange paths are optional or conditional. The diagram intentionally shows no permanent AD DS server and no inbound Internet RDP. The office PCs remain required access hardware even though the desktop workload is centralized.</p>
+<h2>3. Design principles</h2>
+<h3>3.1 Centralize only when the benefit is real</h3>
+<p>AVD changes the operating model, not just the login method. Every user session, Windows application, profile, and much of the troubleshooting path depends on Azure and Internet connectivity. Select it when centralization solves a documented business problem.</p>
+<h3>3.2 Prefer a pooled host pool</h3>
+<p>Six users generally do not need 10 always-on personal desktops. A pooled host pool provides a common image and can place users on an available session host. Pooled desktops reduce idle capacity and simplify image management, but they require application compatibility testing, profile persistence, and clear handling of user-specific settings.</p>
+<h3>3.3 Separate pilot economics from production availability</h3>
+<p>One small session host can reduce pilot cost. It is also a single point of failure and may become saturated during concurrent use. Production must either accept that risk formally or use two or more hosts, drain mode, and a tested capacity plan.</p>
+<h3>3.4 Entra-join rather than recreate AD DS by default</h3>
+<p>The preferred baseline uses cloud-only Entra identities and Entra-joined session hosts. It does not add a domain controller, Entra Domain Services, or a site-to-site VPN simply to preserve an old domain model. Any application that truly requires LDAP, Kerberos, traditional GPO processing, or a domain-bound service must be identified and treated as a design exception.</p>
+<h3>3.5 Treat the image as a product</h3>
+<p>The golden image is the production desktop. It needs ownership, versioning, a maintenance window, application compatibility tests, security updates, rollback images, and a replacement process. Pooled session hosts should be reimaged or replaced rather than upgraded in place when the platform or image lifecycle requires it.</p>
+<h3>3.6 Profiles are user data, not the backup plan</h3>
+<p>FSLogix makes a pooled desktop feel persistent by attaching a user profile container. A profile container is not, by itself, a complete backup, an application recovery plan, or an exit strategy. Azure Files protection, independent Google Workspace backup, image versioning, and restore tests are separate requirements.</p>
+<h3>3.7 Recovery is mandatory; mobility is optional</h3>
+<p>AVD can make a user less dependent on one physical PC, but the business does not have to enable remote work. If remote or secondary-device access is approved, it must reuse Entra identity, MFA, Conditional Access, logging, and offboarding controls rather than create an unmanaged access path.</p>
+<h3>3.8 Five-pillar validation using the Azure Well-Architected Framework</h3>
+<p>Solution 3 maps directly to Azure resources and should be reviewed against all five Azure Well-Architected pillars. The controls below restore the measurable targets and evidence needed to balance availability, security, cost, operations, and user experience.</p>
+<table><thead><tr>
+<th>Pillar</th>
+<th>Assessment</th>
+<th>Controls and evidence required before approval</th>
+</tr></thead><tbody>
+<tr>
+<td>Reliability</td>
+<td>Strong foundation; recovery boundaries and targets must be explicit</td>
+<td>Set RTO/RPO and a dependency/availability matrix for Entra, AVD control-plane services, session hosts, Azure Files/FSLogix, DNS, office Internet, and the selected region. Test host drain/failure, profile/storage restore, network degradation, emergency access, and the documented regional/service-outage response. Do not claim regional high availability unless a second-region design is approved and tested.</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Strong baseline; continuous detection and response must be evidenced</td>
+<td>Retain Entra MFA/Conditional Access, Azure RBAC, managed identities where applicable, encrypted disks/data, Defender/endpoint controls, no public IP or inbound RDP, least-privilege redirection, and audit logs. Add vulnerability/patch evidence, security-alert triage, lost-device/session revocation, and periodic privileged-access review.</td>
+</tr>
+<tr>
+<td>Cost Optimization</td>
+<td>Detailed model; resource-level accountability should be added</td>
+<td>Apply owner, environment, cost-center, image-version, and shutdown tags; enforce budgets and alerts; use autoscale/scheduled shutdown, right-size from measured concurrency, remove idle resources, and review storage/Log Analytics/backup growth monthly. Validate license eligibility and compare reserved/savings options only after usage is stable.</td>
+</tr>
+<tr>
+<td>Operational Excellence</td>
+<td>Strong runbooks; repeatable deployment and learning loops need explicit evidence</td>
+<td>Keep infrastructure and policy decisions reproducible through approved templates or documented build steps, version the golden image and application packages, use pilot rings and rollback, monitor Azure service health, and record incidents, changes, post-incident actions, and support ownership. Test the full host-pool, profile, image, backup, and cost-shutdown runbooks.</td>
+</tr>
+<tr>
+<td>Performance Efficiency</td>
+<td>Partial; baseline metrics exist, but targets and load tests are required</td>
+<td>Define targets for connection success, logon duration, profile attach, application launch, CPU/memory/disk latency, session density, and user-perceived responsiveness. Load-test expected concurrency, measure WAN latency/jitter/packet loss, validate autoscale response and RDP Shortpath where applicable, and resize or add hosts based on measured demand.</td>
+</tr>
+</tbody></table>
+<h2>4. Logical architecture</h2>
+<h3>4.1 Identity and access layer</h3>
+<p>Microsoft Entra ID is the authoritative directory for AVD. User objects, groups, authentication methods, Conditional Access, licensing assignment, and administrator roles are managed in Entra.</p>
+<p>Recommended controls:</p>
+<ul>
+<li>one verified corporate domain and one named account per employee;</li>
+<li>separate privileged administrator accounts and at least two protected emergency accounts;</li>
+<li>security groups for AVD users, host-pool assignment, application access, and administrators;</li>
+<li>MFA for all users, with phishing-resistant methods for administrators where practical;</li>
+<li>Conditional Access requiring MFA and blocking legacy authentication;</li>
+<li>separate policies for administrator access, office terminals, and optional remote devices;</li>
+<li>sign-in and audit-log retention for the approved period;</li>
+<li>company-controlled tenant ownership, billing, recovery methods, and DNS registrations; and</li>
+<li>a documented joiner/mover/leaver process that revokes AVD, Google, Office, and other SaaS access together.</li>
+</ul>
+<p>AVD authentication and Windows session-host authentication should use the same Entra identity. Assign the approved Business Premium with Teams license to every internal AVD user and do not add standalone Intune Plan 1 or Entra ID P1 licenses on top of it. Local-only Windows accounts are not a supported identity solution for AVD user sessions. If a third-party identity provider is retained, it must federate with Entra and pass the AVD authentication and Conditional Access pilot.</p>
+<h4>User sign-in and authentication workflow</h4>
+<p><img src="../images/avd_entra_authentication_workflow.svg" alt="Solution 3 user sign-in and authentication workflow" loading="lazy"></p>
+<p>The workflow has a terminal authentication path followed by AVD brokering and hosted-profile attachment:</p>
+<ol>
+<li>The user signs in to the Windows access terminal with the approved local terminal method and launches Windows App or the supported Remote Desktop client.</li>
+<li>The client sends the user to Microsoft Entra ID. Entra validates the identity, MFA, Conditional Access, and the user’s eligible AVD license, then returns an access token.</li>
+<li>The client presents the token to the AVD service and requests the assigned workspace and desktop application group.</li>
+<li>AVD validates the group assignment, selects an available session host, and establishes the brokered reverse-connect session without exposing inbound Internet RDP.</li>
+<li>The session host validates the session identity and attaches the user’s FSLogix profile container from Azure Files using the approved authentication and permissions model.</li>
+<li>The hosted Windows session opens with Office, Chrome, Google Workspace when retained, communication tools, and approved applications. Intune and Defender controls manage the selected devices/hosts but do not replace Entra authentication or the AVD broker.</li>
+</ol>
+<p>The Azure subscription and Entra tenant provide the resource, identity, RBAC, budget, and recovery boundary. If Google Workspace is retained, its browser session is established after the hosted Windows session starts; its license fee is excluded from the cost calculation but its entitlement remains required.</p>
+<h3>4.2 AVD resource hierarchy</h3>
+<p>Use a small, clearly named Azure resource structure:</p>
+<table><thead><tr>
+<th>Scope</th>
+<th>Example design</th>
+<th>Purpose</th>
+</tr></thead><tbody>
+<tr>
+<td>Subscription</td>
+<td>One company-owned Azure subscription associated with the production Entra tenant</td>
+<td>Billing, quotas, policy, support ownership, and AVD resource boundary</td>
+</tr>
+<tr>
+<td>Resource group</td>
+<td><code>rg-avd-prod-ca</code></td>
+<td>AVD, host-pool, workspace, diagnostics and dependent resources</td>
+</tr>
+<tr>
+<td>Host pool</td>
+<td><code>hp-avd-pooled-prod</code></td>
+<td>Pooled session hosts and load-balancing policy</td>
+</tr>
+<tr>
+<td>Workspace</td>
+<td><code>ws-avd-prod</code></td>
+<td>User-facing AVD workspace</td>
+</tr>
+<tr>
+<td>Desktop application group</td>
+<td><code>dag-avd-desktop-prod</code></td>
+<td>Full desktop assignment to the initial user group</td>
+</tr>
+<tr>
+<td>Session-host VM scale set or VM set</td>
+<td>Named consistently by image/version</td>
+<td>Windows multi-session capacity</td>
+</tr>
+<tr>
+<td>Storage resource group</td>
+<td><code>rg-avd-storage-ca</code></td>
+<td>Azure Files profile share and protection resources</td>
+</tr>
+<tr>
+<td>Monitoring resource group</td>
+<td>Existing shared or dedicated Log Analytics scope</td>
+<td>Diagnostics, alerts and operational evidence</td>
+</tr>
+</tbody></table>
+<p>Use tags for owner, environment, cost center, data classification, image version, support contact, and shutdown schedule. Keep the first deployment in one Azure region selected for user latency, data residency, and service availability. Multi-region AVD is a separate project and is not part of the lightweight baseline.</p>
+<p>The Azure subscription and Microsoft Entra tenant are required foundation components for AVD. Before resource deployment, verify tenant ownership, corporate domain, billing owner, subscription association, RBAC, budgets, activity logging, policy, support contacts, and recovery contacts. Keep any additional Azure service outside the approved AVD scope until it has a resource-level estimate and owner.</p>
+<h3>4.3 Workspace, application group, and host pool</h3>
+<p>The AVD service exposes one workspace and one desktop application group for the first phase. Assign access through a group rather than individual users. Add RemoteApp application groups only if a specific workflow benefits from publishing one application instead of a full desktop.</p>
+<p>Recommended host-pool settings:</p>
+<ul>
+<li><strong>Pooled</strong> host-pool type for shared capacity;</li>
+<li>breadth-first load balancing for an even pilot distribution, or depth-first only after capacity and performance testing support it;</li>
+<li>drain mode before maintenance or image replacement;</li>
+<li>session limits, idle/disconnect timeouts, and logoff policy documented with user impact;</li>
+<li>clipboard, drive, printer, USB, camera, microphone, and local-device redirection disabled by default and enabled only where needed;</li>
+<li>Start VM on Connect only when its latency and quota behavior are acceptable; and</li>
+<li>a scaling plan that powers hosts on and off according to the actual working schedule.</li>
+</ul>
+<p>Do not add a public IP to a session-host NIC. Do not publish TCP 3389 to the Internet. The AVD service brokers connections using reverse connect over HTTPS; RDP Shortpath may add UDP performance where network conditions permit.</p>
+<h3>4.4 Session-host compute and image</h3>
+<p>The session host is a Windows 11 Enterprise multi-session Azure VM. The final VM size depends on Office usage, browser tabs, Drive behavior, video conferencing, and line-of-business applications. A small pilot can start with one general-purpose VM and measure CPU, memory, disk latency, logon duration, and concurrent-user density before selecting the production size.</p>
+<p>The image should include only approved and supportable software:</p>
+<ul>
+<li>Windows 11 Enterprise multi-session with current supported updates;</li>
+<li>Microsoft 365 Apps or separately licensed Office, activated and tested for shared computer use where required;</li>
+<li>Chrome and Google Workspace browser access;</li>
+<li>Google Drive for desktop only after multi-session, profile, caching, and synchronization testing;</li>
+<li>communication and conferencing software with camera, microphone, and media redirection tests;</li>
+<li>Defender and the selected endpoint-security baseline;</li>
+<li>required line-of-business applications, with vendor support confirmed for multi-session;</li>
+<li>approved fonts, printers, certificate chains, and browser extensions; and</li>
+<li>no unapproved kernel drivers, VPN clients, local database servers, or hardware-dependent utilities.</li>
+</ul>
+<p>Maintain a versioned image definition and a small test ring. Store the last known-good image and document how to roll back a host pool. For pooled session hosts, plan image replacement/redeployment instead of relying on an in-place Windows upgrade. Validate Windows 11 hardware and application prerequisites before selecting the image.</p>
+<h3>4.5 Profile and user-data layer</h3>
+<p>Use FSLogix profile containers when a pooled host pool needs a persistent user experience. The preferred storage target is an Azure Files share configured for Microsoft Entra Kerberos authentication for cloud-only identities, subject to pilot validation.</p>
+<p>Profile design requirements:</p>
+<ul>
+<li>one profile container per user with a documented naming and quota convention;</li>
+<li>Azure Files share permissions mapped to the AVD user group and administrators by least privilege;</li>
+<li>exclusions for disposable caches where they improve logon and storage behavior;</li>
+<li>tested handling of Outlook, Chrome, Office, Google Drive, and communication-app caches;</li>
+<li>no assumption that profile containers replace shared-drive permissions or SaaS backup;</li>
+<li>Azure Files snapshots/backup selected according to the RPO/RTO; and</li>
+<li>a restore test that proves a user can sign in to a replacement host with a recovered profile.</li>
+</ul>
+<p>Cloud-only Entra Kerberos and FSLogix behavior are feature-specific. Test the exact Azure region, storage configuration, permissions, profile format, and host image before committing production data. If the pilot fails, use a supported alternative such as a personal-host design, OneDrive/known-folder redirection where appropriate, browser-first Google Workspace access, or a separately validated profile-storage architecture. Do not reintroduce AD DS solely because a profile-storage shortcut was not tested.</p>
+<p>Business documents should remain in Google Shared drives or other approved SaaS repositories. Local session-host disks and profile containers are working storage, not the authoritative business repository.</p>
+<h3>4.6 Google Workspace integration</h3>
+<p>When retained, Google Workspace remains the primary collaboration platform. In the AVD session, users use Chrome, Gmail, Drive, Docs, shared drives, and approved SaaS applications.</p>
+<p>Recommended Google design:</p>
+<ul>
+<li>use the same corporate email address in Entra and Google Workspace where possible;</li>
+<li>use browser-first Google Workspace access for the pilot;</li>
+<li>install Google Drive for desktop only after confirming multi-session support, cache location, profile persistence, concurrent-session behavior, and file-locking expectations;</li>
+<li>preserve Shared drive ownership and permissions independent of AVD;</li>
+<li>retain an independent Google Workspace backup and export process;</li>
+<li>define whether offline Google files are allowed, noting that AVD sessions depend on cloud connectivity; and</li>
+<li>test links, Chrome profiles, extensions, printing, download controls, and data-loss-prevention policies.</li>
+</ul>
+<p>If Google is the authoritative identity for the wider business, federation or lifecycle synchronization with Entra must be designed explicitly. Avoid manually maintaining two unrelated user directories. The selected identity source, provisioning direction, and offboarding evidence must be recorded before pilot enrollment.</p>
+<h3>4.7 Office and other applications</h3>
+<p>Office applications run in the session-host image rather than on the terminal by default. Confirm that the baseline Business Premium license permits use in a shared Windows multi-session environment. Microsoft Office and Google Workspace are complementary in this design: Office supports local document workflows, while Google Workspace remains the SaaS and collaboration system when retained.</p>
+<p>For every other application, record:</p>
+<ul>
+<li>publisher support for Azure Virtual Desktop and Windows multi-session;</li>
+<li>license activation and user/device assignment behavior;</li>
+<li>CPU, memory, disk, graphics, and network requirements;</li>
+<li>profile and roaming behavior;</li>
+<li>dependency on LDAP, Kerberos, SMB, a local database, a hardware token, a kernel driver, or an office-only IP range;</li>
+<li>printer, scanner, webcam, microphone, USB, smart-card, and clipboard behavior; and</li>
+<li>backup, data location, and restore procedure.</li>
+</ul>
+<p>An application that needs traditional domain services is not silently “solved” by AVD. It must be remediated, replaced, isolated behind a documented exception, or retained on a supported service until a later project.</p>
+<h3>4.8 Office terminals and local network</h3>
+<p>The existing PCs can remain as Windows 11 access terminals if they meet lifecycle, performance, security, and recovery requirements. They need:</p>
+<ul>
+<li>a supported Windows client edition;</li>
+<li>Windows App or the supported Remote Desktop client;</li>
+<li>local standard-user operation and controlled administration;</li>
+<li>BitLocker or equivalent device encryption and a documented recovery-key process;</li>
+<li>endpoint protection, patching, inventory, and remote-support controls;</li>
+<li>no default storage of business data outside approved local caches;</li>
+<li>tested display scaling, audio, webcam, printer, scanner, USB, smart-card, and keyboard behavior; and</li>
+<li>a replacement or reprovisioning process independent of the AVD session host.</li>
+</ul>
+<p>The office router/firewall should provide DHCP and DNS forwarding after AD DS retirement. The AVD baseline needs outbound access to Microsoft identity, AVD, monitoring, update, and storage endpoints and to Google Workspace. Use the vendor-published endpoint requirements and review them as they change.</p>
+<p>Network requirements:</p>
+<ul>
+<li>outbound HTTPS 443 is required for control and reverse-connect traffic;</li>
+<li>UDP RDP Shortpath is optional and should be tested rather than required for acceptance;</li>
+<li>no inbound RDP, SMB, LDAP, or administrative connection from the Internet;</li>
+<li>no public session-host IP addresses;</li>
+<li>VNet subnets, NSGs, and route controls are kept minimal and documented;</li>
+<li>private endpoints and private DNS are used only when a data-control or network requirement justifies their additional cost and administration; and</li>
+<li>office Internet bandwidth, latency, jitter, packet loss, and failover behavior are measured during peak use.</li>
+</ul>
+<h3>4.9 Azure operations, monitoring, and backup</h3>
+<p>Operate AVD through a small set of repeatable controls:</p>
+<ul>
+<li>Azure Monitor and Log Analytics for host health, connection failures, sign-in failures, boot failures, and capacity;</li>
+<li>alerting for stopped/unavailable hosts, failed scaling actions, profile attach failures, storage capacity, backup failures, and budget thresholds;</li>
+<li>Azure budgets and cost alerts by subscription, resource group, and host pool;</li>
+<li>scheduled maintenance and drain-mode runbooks;</li>
+<li>image version and rollback records;</li>
+<li>Azure Files backup/snapshots according to the approved RPO/RTO;</li>
+<li>session-host recovery through image redeployment rather than manual repair wherever practical;</li>
+<li>independent Google Workspace backup; and</li>
+<li>quarterly restore evidence for a profile, a shared file, a session host, and administrative access.</li>
+</ul>
+<p>Azure Backup protects selected Azure resources; it does not automatically prove that a user can work after a full host-pool or identity failure. Document the recovery sequence and test it.</p>
+<h3>4.10 Optional business value-adds</h3>
+<p>These capabilities are not required for the basic AVD design and are excluded from the <strong>58–104 hour</strong> implementation estimate and the baseline cost model. Approve each only with an owner, measurable outcome, data boundary, recurring-cost ceiling, and rollback or retirement criterion.</p>
+<table><thead><tr>
+<th>Optional capability</th>
+<th>Small-business value</th>
+<th>Planning treatment</th>
+</tr></thead><tbody>
+<tr>
+<td>Windows Autopilot for access terminals</td>
+<td>Speeds replacement or reprovisioning of the office PCs used to access AVD</td>
+<td>Optional Intune-based terminal lifecycle capability; allow <strong>4–8 hours</strong> for registration, profile, application, and replacement testing.</td>
+</tr>
+<tr>
+<td>SharePoint/Teams operating hub</td>
+<td>Centralizes procedures, templates, forms, onboarding material, and Microsoft-owned content</td>
+<td>Uses baseline Microsoft 365 services where appropriate; allow <strong>6–12 hours</strong>. Do not duplicate Google Shared drives without a content-ownership decision.</td>
+</tr>
+<tr>
+<td>Power Automate standard workflows</td>
+<td>Automates approvals, onboarding/offboarding tasks, reminders, and support or backup exceptions</td>
+<td>Allow <strong>2–4 hours per lightweight workflow</strong>. Premium/custom connectors, gateways, RPA, and AI Builder require separate licensing review.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Copilot Chat</td>
+<td>Web research, drafting, summarization, and general employee assistance</td>
+<td>Eligible Business Premium users can use web-based Copilot Chat without an additional Copilot license; allow <strong>2–4 hours</strong> for safe-use guidance and a pilot.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Copilot pilot</td>
+<td>Work-grounded assistance across Microsoft 365 email, documents, Teams, and meetings</td>
+<td>Requires a separate per-user add-on; pilot with one or two users after reviewing permissions; allow <strong>4–8 hours</strong>, excluding license fees. It does not automatically ground on Google Workspace data.</td>
+</tr>
+<tr>
+<td>Copilot Studio internal FAQ agent</td>
+<td>Internal IT, HR, operating-procedure, or customer-service answers</td>
+<td>Requires separate agent licensing, Copilot Credits, or usage-based billing; allow <strong>8–16 hours</strong> plus content-owner time and ongoing maintenance.</td>
+</tr>
+<tr>
+<td>Mobile application management</td>
+<td>Controlled access from approved mobile/BYOD devices</td>
+<td>Optional Intune-based capability; allow <strong>4–8 hours</strong> for policy, Conditional Access, privacy, and revocation testing.</td>
+</tr>
+<tr>
+<td>Azure VM jumpbox or temporary remote server</td>
+<td>Controlled administrative or migration access to the Azure environment</td>
+<td>Optional only; use private networking and Bastion/VPN, Entra/MFA/RBAC, budgets, automatic shutdown, and an expiry date; allow <strong>6–12 hours</strong> plus Azure consumption.</td>
+</tr>
+<tr>
+<td>Azure Arc for retained on-premises hosts</td>
+<td>Central inventory, management, and patch visibility while a server remains</td>
+<td>Optional; use only for approved retained hosts. Add Arc/Update Manager/Monitor or Defender charges as applicable and protect Tier 0 systems carefully.</td>
+</tr>
+</tbody></table>
+<p>Defer a custom Azure AI application, Microsoft Sentinel, Azure Firewall, Entra ID P2/governance features, and additional AVD regions until a specific business, regulatory, or revenue case justifies their cost and operational complexity.</p>
+<h2>5. User and administrator flows</h2>
+<h3>5.1 Normal office sign-in</h3>
+<p>See the detailed <a href="#user-sign-in-and-authentication-workflow">user sign-in and authentication workflow</a> in section 4.1. The operational sequence is:</p>
+<ol>
+<li>The user signs in to the Windows access terminal with a standard local device account or an approved terminal sign-in method.</li>
+<li>The user launches Windows App or the supported Remote Desktop client.</li>
+<li>Entra authenticates the user and enforces MFA and Conditional Access.</li>
+<li>AVD assigns the user to an available session host in the pooled host pool.</li>
+<li>The broker establishes a reverse-connect session; UDP Shortpath is attempted where available and TCP fallback remains available.</li>
+<li>FSLogix attaches the user profile container from Azure Files.</li>
+<li>The user opens Office, Chrome, Google Workspace, communication tools, and approved applications in the hosted Windows session.</li>
+</ol>
+<p>The terminal is an access device, not the authoritative desktop. A terminal replacement should not require reconstructing the user’s hosted profile or application configuration.</p>
+<h3>5.2 New user</h3>
+<ol>
+<li>Create the user in the authoritative directory and assign the approved Entra/AVD and application licenses.</li>
+<li>Enforce MFA and add the user to the AVD access group.</li>
+<li>Confirm Google Workspace and other SaaS access through the documented provisioning process.</li>
+<li>Verify profile-container creation, Office activation, Google Workspace access, and application entitlements.</li>
+<li>Provide the Windows App sign-in instructions and a short user orientation.</li>
+</ol>
+<h3>5.3 New or rebuilt access terminal</h3>
+<ol>
+<li>Install a supported Windows client image and current patches.</li>
+<li>Enroll the terminal in the selected management and endpoint-security controls.</li>
+<li>Apply the local lockdown, BitLocker, browser, Windows App, and peripheral policies.</li>
+<li>Test Entra/MFA sign-in, AVD launch, printer/audio/webcam behavior, and sign-out.</li>
+<li>Return the terminal to the user without copying profile containers or business data locally.</li>
+</ol>
+<h3>5.4 Image maintenance</h3>
+<ol>
+<li>Update the image definition in a non-production test ring.</li>
+<li>Test Office, Chrome, Google Workspace, communication tools, profiles, printers, and line-of-business applications.</li>
+<li>Publish a versioned image and place hosts into drain mode one at a time.</li>
+<li>Reimage or replace the selected hosts and confirm profile attachment and monitoring.</li>
+<li>Roll back to the previous image if acceptance tests fail.</li>
+</ol>
+<h3>5.5 Administrator and support flow</h3>
+<p>Administrators use separate privileged Entra accounts, MFA, least-privilege Azure RBAC, and documented break-glass procedures. Support starts with the AVD connection/health view, Entra sign-in logs, host health, profile attach events, image version, Azure Files status, and cost alerts. The runbook must distinguish an identity problem, a client/terminal problem, a host-pool capacity problem, a profile/storage problem, an application problem, and an Internet problem.</p>
+<h3>5.6 Optional remote-work flow</h3>
+<p>If approved, an employee launches the same AVD workspace from an approved home or secondary device, authenticates with Entra MFA and Conditional Access, and receives the same hosted desktop. No direct connection to the office LAN, domain controller, SMB share, or RDP listener is required.</p>
+<p>This optional flow must be separately tested for device trust, browser/client support, audio/video quality, printing, downloads, clipboard, session timeout, lost-device revocation, and data leakage. If the business only needs Gmail, Drive, Docs, and browser SaaS remotely, direct managed-device SaaS access may be simpler and less expensive than AVD.</p>
+<h2>6. Security baseline</h2>
+<h3>6.1 Identity security</h3>
+<ul>
+<li>Entra MFA for every AVD user;</li>
+<li>Conditional Access for MFA, device/session risk, administrators, and optional external access;</li>
+<li>separate privileged accounts and protected emergency accounts;</li>
+<li>least-privilege Azure RBAC for AVD, storage, networking, monitoring, and billing;</li>
+<li>no shared user accounts;</li>
+<li>prompt offboarding and token/session revocation; and</li>
+<li>reviewed sign-in, audit, provisioning, and AVD diagnostic logs.</li>
+</ul>
+<h3>6.2 Session-host security</h3>
+<ul>
+<li>supported Windows 11 Enterprise multi-session image;</li>
+<li>Microsoft Defender and selected endpoint-security controls;</li>
+<li>security baseline, firewall, attack-surface reduction, browser, and application controls;</li>
+<li>current Windows and application updates;</li>
+<li>encrypted OS and data disks using supported Azure encryption;</li>
+<li>no public IP and no inbound RDP;</li>
+<li>local administrator access removed or separately controlled;</li>
+<li>controlled clipboard, drive, printer, USB, camera, and microphone redirection; and</li>
+<li>application allow-list or least-privilege controls where the selected tooling supports them.</li>
+</ul>
+<h3>6.3 Data security</h3>
+<ul>
+<li>Google Workspace and shared-drive permissions remain authoritative for Google data;</li>
+<li>Azure Files profile-share permissions follow least privilege;</li>
+<li>profile, backup, and exported data are encrypted in transit and at rest;</li>
+<li>downloads, clipboard, printing, and local-drive redirection are explicitly approved;</li>
+<li>administrative credentials and recovery keys are not stored in profiles or on terminals; and</li>
+<li>data-retention, legal-hold, and deletion behavior is documented for both Google and Azure.</li>
+</ul>
+<h3>6.4 Network security</h3>
+<ul>
+<li>outbound-only office firewall model;</li>
+<li>vendor endpoint allow-list reviewed during change management;</li>
+<li>no office-to-cloud VPN required in the cloud-only baseline;</li>
+<li>no public management endpoint for session hosts;</li>
+<li>minimal VNet, subnet, and NSG design;</li>
+<li>private endpoints only after a cost/benefit decision; and</li>
+<li>documented behavior if the office Internet connection fails.</li>
+</ul>
+<h2>7. AD DS dependency-removal gate</h2>
+<p>AVD does not automatically eliminate every dependency on the old domain. Before stopping the domain controller, discovery evidence must prove that each item is replaced, remediated, or formally waived:</p>
+<table><thead><tr>
+<th>Dependency</th>
+<th>AVD target treatment</th>
+<th>Evidence required</th>
+</tr></thead><tbody>
+<tr>
+<td>User authentication</td>
+<td>Entra identity and MFA</td>
+<td>Successful user and admin sign-in tests</td>
+</tr>
+<tr>
+<td>Windows computer accounts</td>
+<td>Entra-joined session hosts and managed terminals</td>
+<td>Join, enrollment, and replacement evidence</td>
+</tr>
+<tr>
+<td>Group Policy</td>
+<td>Intune, image policy, application policy, or documented local policy</td>
+<td>Policy-to-control mapping and test results</td>
+</tr>
+<tr>
+<td>DNS/DHCP</td>
+<td>Router/firewall or supported cloud/network service</td>
+<td>Lease, name resolution, and outage test</td>
+</tr>
+<tr>
+<td>File shares</td>
+<td>Google Shared drives, Azure Files, or approved SaaS</td>
+<td>Permission, ownership, backup, and restore test</td>
+</tr>
+<tr>
+<td>Print services</td>
+<td>Direct/cloud printing or supported print service</td>
+<td>Print and driver test</td>
+</tr>
+<tr>
+<td>LDAP/Kerberos</td>
+<td>Application remediation or approved retained dependency</td>
+<td>Vendor/application evidence</td>
+</tr>
+<tr>
+<td>Certificates</td>
+<td>Cloud PKI, application-managed certificates, or replacement</td>
+<td>Certificate issuance and renewal test</td>
+</tr>
+<tr>
+<td>VPN/RADIUS/Wi-Fi</td>
+<td>Cloud identity integration or network-device replacement</td>
+<td>Authentication and revocation test</td>
+</tr>
+<tr>
+<td>Service accounts</td>
+<td>Managed identity, app identity, or documented replacement</td>
+<td>Rotation, ownership, and run test</td>
+</tr>
+<tr>
+<td>Scheduled tasks/scripts</td>
+<td>Cloud automation, task redesign, or approved local task</td>
+<td>Execution, ownership, and recovery test</td>
+</tr>
+<tr>
+<td>Backup jobs</td>
+<td>Azure Files/VM backup and independent SaaS backup</td>
+<td>Successful restore evidence</td>
+</tr>
+<tr>
+<td>Monitoring/alerting</td>
+<td>Azure Monitor, endpoint, network, and SaaS alerts</td>
+<td>Alert delivery and response test</td>
+</tr>
+</tbody></table>
+<p>The final gate requires a current dependency inventory, exports of required AD information, a rollback plan, tested emergency access, and a change window. Do not power off the only domain controller until the business owner approves the evidence.</p>
+<h2>8. Migration implementation plan</h2>
+<h3>Time estimate</h3>
+<p>The following is a planning estimate for six initial users, up to 10 access terminals, and a basic AVD deployment. <strong>Effort</strong> is hands-on implementation labor; <strong>elapsed time</strong> includes Azure subscription and licensing decisions, quota/vendor dependencies, user acceptance, migration batches, change windows, and stabilization. Phase 1 and Phase 2 include the company-owned Azure subscription foundation and assignment/validation of the Microsoft 365 Business Premium with Teams baseline. Optional value-adds remain excluded. The phase totals align with the <strong>58–104 hour</strong> basic implementation range in section 10.</p>
+<table><thead><tr>
+<th>Phase</th>
+<th>Effort</th>
+<th>Indicative elapsed time</th>
+</tr></thead><tbody>
+<tr>
+<td>Phase 0 — Discovery and AVD fit decision</td>
+<td>8–12 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 1 — Azure foundation and governance</td>
+<td>6–10 hours</td>
+<td>3–7 business days</td>
+</tr>
+<tr>
+<td>Phase 2 — Identity and access foundation</td>
+<td>4–6 hours</td>
+<td>3–5 business days</td>
+</tr>
+<tr>
+<td>Phase 3 — Image and application engineering</td>
+<td>12–20 hours</td>
+<td>2–3 weeks</td>
+</tr>
+<tr>
+<td>Phase 4 — AVD service and host-pool pilot</td>
+<td>10–16 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 5 — Profile, storage, and recovery pilot</td>
+<td>8–16 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 6 — User and terminal pilot</td>
+<td>6–10 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 7 — Production rollout</td>
+<td>2–4 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 8 — Stabilization and AD DS retirement</td>
+<td>2–10 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td><strong>Total basic implementation effort</strong></td>
+<td><strong>58–104 hours</strong></td>
+<td><strong>Approximately 10–16 weeks</strong></td>
+</tr>
+</tbody></table>
+<p>The elapsed range assumes one implementation owner working part time and does not include hardware procurement, licensing-approval delays, major application redevelopment, regional business-continuity design, or ongoing managed support. Two-host production availability, private endpoints, complex peripherals, or failed profile authentication can increase the estimate.</p>
+<p>See the separate <a href="../30-deployment/solution-3-implementation-action-plan.html">Solution 3 detailed implementation action plan</a> for the task-level checklist, owners, dependencies, evidence, effort estimates, go/no-go gates, rollback controls, and handover requirements.</p>
+<h3>Phase 0 — Discovery and AVD fit decision</h3>
+<ul>
+<li>inventory users, PCs, Windows editions, Office licenses, Google Workspace editions, applications, peripherals, bandwidth, and AD dependencies;</li>
+<li>measure peak concurrent users and identify expected AVD session density;</li>
+<li>classify applications as browser/SaaS, Office, multi-session compatible, domain-dependent, hardware-dependent, or retired;</li>
+<li>confirm whether a central desktop is actually required or merely attractive;</li>
+<li>define RTO/RPO, monthly budget ceiling, region, optional mobility scope, and one-host versus two-host availability target;</li>
+<li>record Windows 10 upgrade/replacement requirements; and</li>
+<li>approve a written go/no-go decision for AVD before building production resources.</li>
+</ul>
+<h3>Phase 1 — Azure foundation and governance</h3>
+<ul>
+<li>create or associate one company-owned Azure subscription with the production Microsoft Entra tenant; confirm tenant, domain, billing, ownership, and recovery contacts;</li>
+<li>select region, resource groups, naming, tags, and owners;</li>
+<li>configure budgets, alerts, RBAC, policy, diagnostic settings, and support contacts;</li>
+<li>define VNet, subnet, NSG, DNS, egress, and private-endpoint decisions;</li>
+<li>confirm Azure quotas and eligible AVD licensing; and</li>
+<li>create an implementation rollback and cost-shutdown procedure.</li>
+</ul>
+<h3>Phase 2 — Identity and access foundation</h3>
+<ul>
+<li>confirm Entra tenant ownership and verified domain;</li>
+<li>create groups, privileged accounts, emergency accounts, and MFA/Conditional Access policies;</li>
+<li>purchase and assign six Microsoft 365 Business Premium with Teams licenses as the baseline AVD user entitlement;</li>
+<li>do not add standalone Intune Plan 1 or Entra ID P1 licenses on top of Business Premium; document any separately approved license exception;</li>
+<li>validate that each AVD user has an eligible Windows/AVD entitlement and that Office shared-computer activation rights are covered;</li>
+<li>configure AVD authentication and optional SSO; and</li>
+<li>map the Google Workspace identity lifecycle and offboarding process.</li>
+</ul>
+<h3>Phase 3 — Image and application engineering</h3>
+<ul>
+<li>build a Windows 11 Enterprise multi-session golden image;</li>
+<li>install Office, Chrome, Google Workspace/browser components, communication tools, security agents, and approved applications;</li>
+<li>validate shared-computer licensing and application vendor support;</li>
+<li>test printers, scanners, cameras, microphones, USB, clipboard, and display behavior;</li>
+<li>create an image versioning, test-ring, rollback, and replacement procedure; and</li>
+<li>document every application’s profile, data, identity, and backup dependency.</li>
+</ul>
+<h3>Phase 4 — AVD service and host-pool pilot</h3>
+<ul>
+<li>create the workspace, desktop application group, pooled host pool, and one pilot session host;</li>
+<li>apply drain, timeout, redirection, and load-balancing settings;</li>
+<li>enable diagnostics, monitoring, and autoscale schedule;</li>
+<li>enroll session hosts in Intune/Defender where licensed and justified;</li>
+<li>test Entra-joined host behavior without on-premises line-of-sight; and</li>
+<li>capture baseline CPU, memory, logon, profile, application, and connection metrics.</li>
+</ul>
+<h3>Phase 5 — Profile, storage, and recovery pilot</h3>
+<ul>
+<li>create Azure Files profile storage and configure the selected Entra Kerberos path;</li>
+<li>apply least-privilege share and NTFS permissions;</li>
+<li>attach FSLogix profiles for pilot users;</li>
+<li>test profile creation, reconnect, concurrent session behavior, cache growth, and restore;</li>
+<li>configure Azure Files snapshots/backup as approved; and</li>
+<li>document the fallback if cloud-only profile authentication or an application is not compatible.</li>
+</ul>
+<h3>Phase 6 — User and terminal pilot</h3>
+<ul>
+<li>migrate two representative users with different application and peripheral needs;</li>
+<li>configure two representative Windows access terminals;</li>
+<li>test normal sign-in, MFA, reconnect, disconnect, printer/scanner/audio/video, Google Workspace, Office, communication tools, and support workflows;</li>
+<li>test Internet degradation and a session-host failure;</li>
+<li>measure user experience and cost at expected concurrency; and</li>
+<li>obtain written pilot acceptance before expanding.</li>
+</ul>
+<h3>Phase 7 — Production rollout</h3>
+<ul>
+<li>add production hosts only after sizing and availability approval;</li>
+<li>migrate users in small groups and keep the old AD-dependent path available only for rollback evidence;</li>
+<li>replace or reimage terminals as needed to meet Windows 11 and security requirements;</li>
+<li>publish support instructions and a short user guide;</li>
+<li>enforce budgets, alerts, diagnostics, and backup checks; and</li>
+<li>record exceptions with an owner, expiration date, and remediation plan.</li>
+</ul>
+<h3>Phase 8 — Stabilization and AD DS retirement</h3>
+<ul>
+<li>complete the dependency-removal checklist;</li>
+<li>confirm all users, terminals, hosts, profiles, applications, DNS/DHCP, printing, certificates, VPN/RADIUS, scripts, and backups work without the domain controller;</li>
+<li>export required AD and configuration evidence;</li>
+<li>monitor for an agreed stabilization period;</li>
+<li>take a final backup and document the rollback point;</li>
+<li>stop and decommission the AD DS server only after business-owner approval; and</li>
+<li>securely retire, repurpose, or dispose of the old server and credentials.</li>
+</ul>
+<h3>Optional value-add work packages</h3>
+<p>The work below is separate from the <strong>58–104 hour</strong> basic AVD implementation:</p>
+<ul>
+<li><strong>Windows Autopilot for access terminals:</strong> <strong>4–8 additional hours</strong>;</li>
+<li><strong>SharePoint/Teams operating hub:</strong> <strong>6–12 additional hours</strong>;</li>
+<li><strong>Power Automate standard workflow:</strong> <strong>2–4 additional hours per workflow</strong>;</li>
+<li><strong>Copilot Chat enablement:</strong> <strong>2–4 additional hours</strong>;</li>
+<li><strong>Microsoft 365 Copilot pilot:</strong> <strong>4–8 additional hours</strong>, excluding license fees;</li>
+<li><strong>Copilot Studio FAQ agent:</strong> <strong>8–16 additional hours</strong>, excluding usage or license fees;</li>
+<li><strong>Mobile application management:</strong> <strong>4–8 additional hours</strong>; and</li>
+<li><strong>Azure VM jumpbox/temporary remote server:</strong> <strong>6–12 additional hours</strong>, excluding Azure consumption; and</li>
+<li><strong>Azure Arc/retained-host management:</strong> <strong>4–8 additional hours</strong> for one to three simple hosts, excluding any service consumption charges.</li>
+</ul>
+<p>Complex data integration, regulated content, custom AI, multiple regions, private networking, or advanced security monitoring requires a separate estimate.</p>
+<h3>Implementation deliverables and completed end state</h3>
+<p>After the AVD rollout and stabilization period, the approved implementation will deliver:</p>
+<table><thead><tr>
+<th>Deliverable</th>
+<th>Completed outcome</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft cloud foundation</td>
+<td>Company-owned Microsoft Entra tenant, verified domain, Azure subscription association, ownership/billing, RBAC, budgets, alerts, policies, and recovery contacts</td>
+</tr>
+<tr>
+<td>Licensed AVD user platform</td>
+<td>Six Microsoft 365 Business Premium with Teams licenses assigned to AVD users, with eligible Windows/AVD rights, Entra controls, Intune Plan 1, Office, Teams, and Defender capabilities validated</td>
+</tr>
+<tr>
+<td>AVD service</td>
+<td>Documented workspace, desktop application group, pooled host pool, Entra-joined session hosts, golden image, application set, autoscale, diagnostics, monitoring, and cost controls</td>
+</tr>
+<tr>
+<td>Profile and data protection</td>
+<td>Azure Files/FSLogix configuration, Google Shared drive ownership, Azure resource backup, independent SaaS backup, restore evidence, RPO/RTO, and recovery runbooks</td>
+</tr>
+<tr>
+<td>Managed access terminals</td>
+<td>Up to 10 supported Windows terminals patched, encrypted, protected, inventoried, restricted for redirection, and documented for replacement</td>
+</tr>
+<tr>
+<td>AD DS retirement</td>
+<td>DNS/DHCP and other dependencies transferred or remediated; domain controller demoted and retired after acceptance of the dependency gate</td>
+</tr>
+<tr>
+<td>Optional value-adds, if approved</td>
+<td>Autopilot terminal profile, SharePoint/Teams hub, workflows, Copilot guidance/pilot, FAQ agent, MAM, or Arc-enabled retained hosts with owners, costs, controls, and acceptance evidence</td>
+</tr>
+<tr>
+<td>Handover package</td>
+<td>Architecture, image/application register, policy/configuration register, migration ledger, recovery and support runbooks, cost/license register, rollback evidence, and business acceptance sign-off</td>
+</tr>
+</tbody></table>
+<h2>9. Operating model</h2>
+<h3>Routine operations</h3>
+<table><thead><tr>
+<th>Frequency</th>
+<th>Activity</th>
+<th>Evidence</th>
+</tr></thead><tbody>
+<tr>
+<td>Daily/automated</td>
+<td>AVD health, failed connections, host availability, profile and backup alerts</td>
+<td>Alert queue and response record</td>
+</tr>
+<tr>
+<td>Weekly</td>
+<td>Review host capacity, scaling actions, failed sign-ins, image drift, and user-impacting incidents</td>
+<td>Short operations review</td>
+</tr>
+<tr>
+<td>Monthly</td>
+<td>Review Azure spend, budgets, inactive users, storage growth, patch status, and backup success</td>
+<td>Cost and service report</td>
+</tr>
+<tr>
+<td>Quarterly</td>
+<td>Restore profile/file/host samples, test emergency access, review RBAC and Conditional Access, review image lifecycle</td>
+<td>Recovery and access evidence</td>
+</tr>
+<tr>
+<td>On change</td>
+<td>Pilot image/app/network changes, drain hosts, update documentation, and retain rollback</td>
+<td>Change record</td>
+</tr>
+</tbody></table>
+<h3>Support model</h3>
+<p>The target must be supportable by a generalist administrator or managed service provider. The runbook should include:</p>
+<ul>
+<li>user cannot authenticate;</li>
+<li>Windows App cannot connect;</li>
+<li>host pool has no available session host;</li>
+<li>session is slow or disconnects;</li>
+<li>profile does not attach;</li>
+<li>Google Workspace or Office application fails;</li>
+<li>printer/scanner/audio/video redirection fails;</li>
+<li>host image or update is defective;</li>
+<li>Azure Files or backup is unavailable; and</li>
+<li>Azure spend exceeds the expected envelope.</li>
+</ul>
+<p>The support provider must have documented access, named ownership, a transfer procedure, and no dependency on one employee’s personal account.</p>
+<h2>10. Licensing, capacity, and cost model</h2>
+<h3>Licensing requirements</h3>
+<p>Each user requires an eligible Windows/AVD entitlement. Confirm the exact entitlement before purchase; do not assume that an existing Microsoft or Google subscription automatically includes every AVD right. Validate:</p>
+<ul>
+<li>Windows 11 Enterprise multi-session access rights;</li>
+<li>Microsoft 365 Apps or Office shared-computer activation rights;</li>
+<li>Entra ID and Conditional Access features;</li>
+<li>Intune enrollment and endpoint-security features if selected;</li>
+<li>Azure Files and Entra Kerberos feature support;</li>
+<li>third-party application licenses for shared sessions; and</li>
+<li>external-user licensing if any nonemployee or external access is proposed.</li>
+</ul>
+<h3>Microsoft and Google license profile</h3>
+<p>Prices below are Canadian list-price planning assumptions checked on <strong>2026-09-04</strong>, before applicable tax. Confirm the final quote, currency, billing term, existing entitlements, and AVD eligibility before purchase.</p>
+<table><thead><tr>
+<th>Required item</th>
+<th>Current planning price</th>
+<th>Six-user planning cost</th>
+<th>Scope and notes</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Business Premium with Teams <em>(baseline)</em></td>
+<td><strong>CAD 29.80/user/month</strong>, annual commitment</td>
+<td><strong>CAD 178.80/month</strong> or <strong>CAD 2,145.60/year</strong></td>
+<td>Baseline AVD user subscription; includes Entra ID P1-level controls, Intune Plan 1, Office, Teams, and Defender for Business. Copilot is excluded. Confirm the purchased SKU is assigned to each AVD user.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Business Premium without Teams</td>
+<td><strong>CAD 25.50/user/month</strong>, annual commitment</td>
+<td><strong>CAD 153.00/month</strong> or <strong>CAD 1,836.00/year</strong></td>
+<td>Use only if Teams is not required and the no-Teams SKU meets the AVD, Office, security, and collaboration requirements.</td>
+</tr>
+<tr>
+<td>Optional Google Workspace edition</td>
+<td><strong>Optional; price excluded</strong></td>
+<td><strong>CAD 0 included cost</strong></td>
+<td>Retained for Gmail, Drive, Docs, Shared drives, and collaboration inside the hosted desktop when selected. The required edition and entitlement must still be verified.</td>
+</tr>
+<tr>
+<td>Azure subscription</td>
+<td><strong>No fixed subscription fee; pay-as-you-go for Azure resources</strong></td>
+<td><strong>CAD 0 fixed</strong></td>
+<td>Required company-owned Azure management and billing boundary. AVD compute, disks, Azure Files, networking, monitoring, autoscale, and backup are consumption charges.</td>
+</tr>
+<tr>
+<td>Independent SaaS/endpoint backup</td>
+<td><strong>CAD 50–100/month planning allowance</strong></td>
+<td><strong>CAD 50–100/month</strong></td>
+<td>Vendor quote required; Google Drive synchronization is not a backup.</td>
+</tr>
+</tbody></table>
+<p>Microsoft documents Microsoft 365 Business Premium as an eligible internal-user license for Windows 11 Enterprise multi-session Azure Virtual Desktop. Every internal user who accesses AVD must have an eligible license assigned. Entra ID Free alone is not enough for the target Conditional Access and automatic-enrollment controls, while standalone Intune Plan 1 plus Entra ID P1 should not be treated as an AVD Windows entitlement; if Business Premium is not selected, choose another license explicitly listed as eligible for AVD and validate Office/shared-computer rights separately.</p>
+<p>Intune Plan 1 is <strong>CAD 10.90/user/month</strong> when purchased standalone with annual billing; Plan 2 is an optional <strong>CAD 5.40/user/month</strong> add-on, and Intune Suite is an optional <strong>CAD 13.60/user/month</strong> add-on. These add-ons are not included in the baseline AVD estimate. Do not purchase standalone Entra ID P1 or Intune Plan 1 on top of Business Premium unless a reseller confirms a specific uncovered requirement.</p>
+<h3>Microsoft 365 Business Premium included services</h3>
+<p>In addition to Entra ID P1-level controls and Intune Plan 1, the baseline Microsoft 365 Business Premium with Teams subscription includes:</p>
+<ul>
+<li>Office desktop, web, and mobile applications;</li>
+<li>Exchange Online business email and calendar;</li>
+<li>Teams chat, meetings, and collaboration;</li>
+<li>SharePoint team sites and document collaboration;</li>
+<li>OneDrive for Business storage;</li>
+<li>Microsoft Defender for Business;</li>
+<li>Microsoft Defender for Office 365 Plan 1;</li>
+<li>Microsoft Purview information protection and DLP capabilities; and</li>
+<li>related services such as Planner, Forms, Lists, Bookings, Loop, Clipchamp, and To Do.</li>
+</ul>
+<p>Copilot, Teams Phone/PSTN, Entra ID P2, Intune Plan 2/Suite, Azure consumption, Google Workspace, and independent backup are not included in the baseline license price. Entra ID Free is an optional reduced-control alternative, but it lacks custom Conditional Access and device-compliance gates, some self-service password-reset/writeback and enrollment paths, dynamic groups, and advanced risk/governance capabilities; it is not the recommended AVD profile.</p>
+<h3>License-only recurring baseline</h3>
+<table><thead><tr>
+<th>Profile</th>
+<th>Monthly estimate</th>
+<th>Annual estimate</th>
+<th>Assumptions</th>
+</tr></thead><tbody>
+<tr>
+<td>Business Premium with Teams + backup</td>
+<td><strong>CAD 228.80–278.80/month</strong></td>
+<td><strong>CAD 2,745.60–3,345.60/year</strong></td>
+<td>Six users; Google Workspace is optional and excluded; excludes AVD Azure resource consumption.</td>
+</tr>
+<tr>
+<td>Business Premium without Teams + backup</td>
+<td><strong>CAD 203.00–253.00/month</strong></td>
+<td><strong>CAD 2,436.00–3,036.00/year</strong></td>
+<td>Six users; Google Workspace is optional and excluded; excludes AVD Azure resource consumption.</td>
+</tr>
+<tr>
+<td>Optional Google Workspace license</td>
+<td><strong>CAD 0 included cost</strong></td>
+<td><strong>CAD 0 included cost</strong></td>
+<td>Required if the selected design retains Google Workspace; add the actual fee if it is not already funded.</td>
+</tr>
+</tbody></table>
+<p>The Azure subscription itself is not a monthly license line. AVD resources generate consumption charges even when no additional Azure subscription fee applies. Use the Azure Pricing Calculator after the concurrency pilot to estimate the selected host size/count, disk tier, Azure Files profile storage, backup, Log Analytics, network, and autoscale schedule. The gross AVD operating ranges below include the revised license-only baseline, backup, and estimated Azure consumption; do not add the license-only table a second time.</p>
+<p>Google Workspace remains an optional/retained separate subscription and is not replaced by AVD. If selected, it remains required for Gmail, Drive, Docs, shared drives, and related workflows, but its license fee is excluded from this comparison calculation. AVD does not eliminate Google Workspace backup, domain ownership, or application licensing.</p>
+<h3>Capacity profiles</h3>
+<table><thead><tr>
+<th>Profile</th>
+<th>Session-host approach</th>
+<th>Availability</th>
+<th>Appropriate use</th>
+</tr></thead><tbody>
+<tr>
+<td>Pilot</td>
+<td>One small general-purpose host</td>
+<td>Single point of failure</td>
+<td>Two to three representative users and application testing</td>
+</tr>
+<tr>
+<td>Lean production</td>
+<td>One right-sized host with autoscale</td>
+<td>Low; planned outage on host failure</td>
+<td>Only with explicit business acceptance of the risk</td>
+</tr>
+<tr>
+<td>Recommended production</td>
+<td>Two right-sized hosts with drain mode and autoscale</td>
+<td>Better, but not full regional HA</td>
+<td>Normal six-user workload with basic continuity</td>
+</tr>
+<tr>
+<td>Growth/exception</td>
+<td>Additional hosts, app groups, storage and network controls</td>
+<td>Higher cost and operations</td>
+<td>Proven concurrency, legacy apps, or wider mobility need</td>
+</tr>
+</tbody></table>
+<h3>Budgetary planning ranges</h3>
+<p>Use the Azure Pricing Calculator and current license quotes for approval. The following is a planning model, not a quote:</p>
+<table><thead><tr>
+<th>Cost area</th>
+<th>Planning treatment</th>
+</tr></thead><tbody>
+<tr>
+<td>Eligible user licenses</td>
+<td>Per-user recurring cost; validate existing Microsoft entitlements and Office rights</td>
+</tr>
+<tr>
+<td>Session-host compute</td>
+<td>Main variable; autoscale and scheduled shutdown reduce off-hours use</td>
+</tr>
+<tr>
+<td>OS/data disks</td>
+<td>Per-host recurring storage; include performance tier requirements</td>
+</tr>
+<tr>
+<td>Azure Files profiles</td>
+<td>Capacity, transactions, redundancy, snapshots and backup</td>
+</tr>
+<tr>
+<td>Monitoring</td>
+<td>Log Analytics ingestion, retention, alerts and diagnostic settings</td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>Azure Files/VM protection and independent Google Workspace backup</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>Usually modest for a small office, but include egress and optional private endpoints</td>
+</tr>
+<tr>
+<td>Support/implementation</td>
+<td>Higher than local endpoint migration because image, profile, host-pool and session operations are new</td>
+</tr>
+</tbody></table>
+<p>For a six-user deployment, a low-concurrency pilot may fit within a few hundred dollars per month of Azure infrastructure, while two always-available hosts, premium storage, backup, monitoring, and additional licenses can raise the total substantially. Autoscale reduces idle compute; it does not remove licensing, storage, support, or Internet costs. Approve the monthly ceiling only after a concurrency pilot.</p>
+<h3>Budgetary implementation effort</h3>
+<table><thead><tr>
+<th>Scope</th>
+<th>Estimate</th>
+</tr></thead><tbody>
+<tr>
+<td>Discovery and AVD fit assessment</td>
+<td>8–12 hours</td>
+</tr>
+<tr>
+<td>Azure foundation, identity, network and governance</td>
+<td>8–16 hours</td>
+</tr>
+<tr>
+<td>Image, application and peripheral engineering</td>
+<td>12–24 hours</td>
+</tr>
+<tr>
+<td>AVD host pool, monitoring, autoscale and pilot</td>
+<td>10–16 hours</td>
+</tr>
+<tr>
+<td>FSLogix/Azure Files, backup and recovery tests</td>
+<td>8–16 hours</td>
+</tr>
+<tr>
+<td>User rollout, documentation and AD retirement</td>
+<td>12–20 hours</td>
+</tr>
+<tr>
+<td><strong>Basic total</strong></td>
+<td><strong>58–104 hours</strong></td>
+</tr>
+</tbody></table>
+<p>Legacy applications, two-host availability, private endpoints, complex printing, third-party federation, or failed profile authentication can add material effort. The implementation estimate should be revised after Phase 0.</p>
+<h3>Standard deployment, operational, and maintenance budget</h3>
+<p>For a comparable six-user planning model, use Canadian dollars before tax and annual commitments where available. “Deployment” is one-time professional services. “Operational” is recurring licensing, Azure consumption, and backup cost and excludes support labor. “Maintenance” is routine administration at <strong>CAD 125–150/hour</strong> and excludes incidents, major projects, hardware replacement, and vendor support contracts.</p>
+<table><thead><tr>
+<th>Cost category</th>
+<th>Standard planning amount</th>
+</tr></thead><tbody>
+<tr>
+<td>One-time deployment</td>
+<td><strong>CAD 7,250–15,600</strong> for the documented 58–104 hour basic scope. A low-concurrency pilot may fit within <strong>CAD 6,000–10,800</strong> for 48–72 hours.</td>
+</tr>
+<tr>
+<td>Recurring operational cost</td>
+<td><strong>CAD 808–1,678/month</strong> gross for two right-sized session hosts, Microsoft 365 Business Premium with Teams without Copilot, optional Google Workspace excluded from the calculation, and backup. A one-host pilot is approximately <strong>CAD 508–978/month</strong>, but retains the host single point of failure.</td>
+</tr>
+<tr>
+<td>Routine maintenance</td>
+<td><strong>CAD 750–1,800/month</strong> for approximately 6–12 hours of image, host-pool, FSLogix/profile, autoscale, monitoring, patch, release, backup, and recovery administration. A one-host pilot may require approximately 4–8 hours/month, or approximately <strong>CAD 500–1,200/month</strong>.</td>
+</tr>
+<tr>
+<td>Excluded or optional items</td>
+<td>Google Workspace license fee, Copilot, Intune Plan 2/Suite, Entra ID P2, Azure Arc, private endpoints, higher regional availability, hardware replacement, Internet service, optional dual-WAN/5G or UPS, major application work, incident response, and vendor support contracts.</td>
+</tr>
+</tbody></table>
+<h3>Optional Azure add-on cost treatment</h3>
+<table><thead><tr>
+<th>Optional add-on</th>
+<th>Cost treatment and planning rule</th>
+</tr></thead><tbody>
+<tr>
+<td>Azure VM jumpbox or temporary remote server</td>
+<td>No fixed license line; add VM compute, disks, network, Bastion/VPN, backup, monitoring, and log-ingestion consumption. Use automatic shutdown and remove the resources when the approved temporary purpose ends.</td>
+</tr>
+<tr>
+<td>Azure Arc-enabled on-premises hosts</td>
+<td>Basic Arc connection and Azure resource organization are generally offered at no additional charge; Update Manager, Monitor, Defender, Sentinel, guest configuration, Windows Server pay-as-you-go, log ingestion, and storage may add per-server or consumption charges.</td>
+</tr>
+</tbody></table>
+<p>These add-ons are excluded from the AVD operating ranges and the <strong>58–104 hour</strong> basic implementation estimate. Price them separately with their security controls, owner, budget, and exit criteria.</p>
+<h2>11. Analysis and comparison with the other options</h2>
+<h3>11.1 Requirement fit</h3>
+<table><thead><tr>
+<th>Requirement dimension</th>
+<th>Solution 1: Entra ID + Intune</th>
+<th>Solution 2: Google Workspace + GCPW</th>
+<th>Solution 3: AVD</th>
+</tr></thead><tbody>
+<tr>
+<td>Remove AD DS</td>
+<td>Strong</td>
+<td>Possible with feature-gap validation</td>
+<td>Strong for the cloud-only baseline</td>
+</tr>
+<tr>
+<td>Retain capable local PCs as workstations</td>
+<td>Strong</td>
+<td>Strong</td>
+<td>PCs become access terminals</td>
+</tr>
+<tr>
+<td>Google Workspace alignment</td>
+<td>Good with integration</td>
+<td>Strongest</td>
+<td>Good inside hosted sessions, but adds another desktop plane</td>
+</tr>
+<tr>
+<td>Windows policy and security depth</td>
+<td>Strongest of the three</td>
+<td>Variable; validate gaps</td>
+<td>Strong on session hosts; terminals still need management</td>
+</tr>
+<tr>
+<td>Centralized desktop/application consistency</td>
+<td>Moderate</td>
+<td>Limited</td>
+<td>Strongest</td>
+</tr>
+<tr>
+<td>Local/offline productivity</td>
+<td>Strong</td>
+<td>Strong</td>
+<td>Weak; depends on Internet and Azure availability</td>
+</tr>
+<tr>
+<td>User/device portability</td>
+<td>Optional and straightforward</td>
+<td>Optional and straightforward</td>
+<td>Strong if hosted-session model is useful</td>
+</tr>
+<tr>
+<td>Local data minimization</td>
+<td>Moderate</td>
+<td>Moderate</td>
+<td>Strong for business workload, with profile/storage caveats</td>
+</tr>
+<tr>
+<td>Infrastructure simplicity</td>
+<td>Strong</td>
+<td>Strong if gaps are acceptable</td>
+<td>Weakest</td>
+</tr>
+<tr>
+<td>Predictable low cost</td>
+<td>Strong</td>
+<td>Often strongest</td>
+<td>Weakest; consumption and license sensitivity</td>
+</tr>
+<tr>
+<td>Small-business maintainability</td>
+<td>Strong</td>
+<td>Strong with documented control gaps</td>
+<td>Requires specialist runbooks or managed support</td>
+</tr>
+<tr>
+<td>Legacy AD-dependent applications</td>
+<td>Requires remediation</td>
+<td>Requires remediation</td>
+<td>May centralize them but does not remove the dependency automatically</td>
+</tr>
+</tbody></table>
+<h3>11.2 Why AVD is third for this baseline</h3>
+<p>AVD is third because the requirements prioritize lightweight infrastructure, low recurring cost, stable local productivity, and operation without a full-time specialist. AVD introduces:</p>
+<ul>
+<li>Azure VM compute and storage consumption;</li>
+<li>pooled-session capacity and single-host availability decisions;</li>
+<li>golden-image lifecycle and application compatibility work;</li>
+<li>FSLogix and Azure Files permissions, backup, and restore;</li>
+<li>terminal redirection and remote-session troubleshooting;</li>
+<li>greater dependence on office Internet and Azure regional services; and</li>
+<li>more licenses and operating procedures than are necessary when the existing PCs are capable Windows 11 workstations.</li>
+</ul>
+<p>Those trade-offs are worthwhile only when centralized desktops or a terminal model deliver a measurable business benefit. AVD should move ahead of Solution 2 only when Windows application control, central data location, or standardized hosted desktops are more important than the Google-first low-cost model. It should not displace Solution 1 for a simple AD retirement without such a benefit.</p>
+<h3>11.3 Decision rule</h3>
+<p>Select AVD if the pilot proves all of the following:</p>
+<ol>
+<li>the business accepts Internet/Azure dependency and the approved monthly cost ceiling;</li>
+<li>the application set, Office licensing, peripherals, and Google Workspace workflows work in multi-session;</li>
+<li>the profile-storage design passes sign-in, performance, backup, and restore tests;</li>
+<li>one-host risk or the cost of two hosts is explicitly approved;</li>
+<li>the resulting centralization materially improves support, data control, application delivery, or mobility; and</li>
+<li>the organization can operate the service using a documented generalist or managed-support model.</li>
+</ol>
+<p>Otherwise, use Solution 1 as the default target and keep Solution 2 as the Google-centric alternative.</p>
+<h2>12. Risks and mitigations</h2>
+<table><thead><tr>
+<th>Risk</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr></thead><tbody>
+<tr>
+<td>One host fails</td>
+<td>All users may lose the desktop</td>
+<td>Pilot with one host only; use two production hosts or formally accept the risk</td>
+</tr>
+<tr>
+<td>Office Internet fails</td>
+<td>Users cannot reach hosted desktops</td>
+<td>Test connectivity, maintain SaaS/mobile fallback where approved, document outage procedure</td>
+</tr>
+<tr>
+<td>Azure regional/service outage</td>
+<td>Hosted desktop unavailable</td>
+<td>Define RTO/RPO, status/support procedures, and a later BCDR decision; do not imply regional HA</td>
+</tr>
+<tr>
+<td>AVD consumption exceeds budget</td>
+<td>Cost is unpredictable</td>
+<td>Autoscale, schedules, right-size hosts, budgets, alerts, and monthly review</td>
+</tr>
+<tr>
+<td>Profile container/authentication issue</td>
+<td>Slow or failed logon, lost settings</td>
+<td>Pilot Entra Kerberos/Azure Files, restore test, fallback profile design</td>
+</tr>
+<tr>
+<td>Google Drive for desktop is incompatible</td>
+<td>File sync or profile problems</td>
+<td>Browser-first pilot; test Drive in multi-session before image inclusion</td>
+</tr>
+<tr>
+<td>Printer/USB/camera behavior fails</td>
+<td>Operational disruption</td>
+<td>Explicit redirection matrix and direct/cloud peripheral alternatives</td>
+</tr>
+<tr>
+<td>Image drift or bad update</td>
+<td>Multiple users affected</td>
+<td>Test ring, versioned image, drain mode, replacement and rollback</td>
+</tr>
+<tr>
+<td>License is not eligible</td>
+<td>Compliance/cost problem</td>
+<td>Verify user, Windows, Office, AVD, and application entitlements before deployment</td>
+</tr>
+<tr>
+<td>Legacy app requires AD DS</td>
+<td>Domain controller cannot be retired</td>
+<td>Remediate, replace, isolate, or document a temporary dependency with owner and date</td>
+</tr>
+<tr>
+<td>Private networking becomes overbuilt</td>
+<td>Cost and maintenance increase</td>
+<td>Start with simple supported VNet/egress; add private endpoints only for a proven need</td>
+</tr>
+<tr>
+<td>Terminal is compromised</td>
+<td>Session/data exposure</td>
+<td>Patch/encrypt/lock down terminals, require MFA, limit redirection, revoke lost-device sessions</td>
+</tr>
+<tr>
+<td>Profile or backup is treated as the data source</td>
+<td>Recovery or exit failure</td>
+<td>Keep Google Shared drives authoritative; maintain separate Azure and SaaS backups</td>
+</tr>
+<tr>
+<td>AVD skills are unavailable</td>
+<td>Slow or expensive support</td>
+<td>Use concise runbooks, monitoring, managed support, and transfer-ready documentation</td>
+</tr>
+<tr>
+<td>Microsoft 365 user license is missing or not AVD-eligible</td>
+<td>Access failure, noncompliance, or unexpected cost</td>
+<td>Assign Business Premium with Teams to every AVD user, verify Windows/AVD and Office shared-computer rights, and validate any exception before production</td>
+</tr>
+<tr>
+<td>Google Workspace license assumption is misunderstood</td>
+<td>Google access or collaboration failure</td>
+<td>Treat Google Workspace as optional/retained, exclude its fee only from the planning calculation, and verify entitlement if the design uses Gmail, Drive, Docs, or shared drives</td>
+</tr>
+<tr>
+<td>Copilot or chatbot exposes overshared or inaccurate information</td>
+<td>Confidentiality risk, incorrect advice, or loss of trust</td>
+<td>Review Microsoft 365/SharePoint permissions, use curated sources, require human review, and define an owner and escalation path</td>
+</tr>
+<tr>
+<td>Optional add-ons expand AVD complexity</td>
+<td>Cost and support burden increase</td>
+<td>Approve each add-on separately with a use case, owner, budget, acceptance test, and retirement criterion</td>
+</tr>
+</tbody></table>
+<h2>13. Acceptance criteria</h2>
+<p>The option is accepted only when the following tests pass or a named business owner signs a documented exception:</p>
+<h3>Identity and access</h3>
+<ul>
+<li>all pilot users authenticate to AVD with the authoritative Entra identity;</li>
+<li>six Microsoft 365 Business Premium with Teams licenses are assigned to the approved AVD users, and their Windows/AVD and Office entitlements are validated;</li>
+<li>MFA and Conditional Access behave as designed;</li>
+<li>privileged and emergency access are tested without relying on one employee;</li>
+<li>user provisioning and termination revoke AVD, Google, Office, and other SaaS access;</li>
+<li>session-host join type is consistent and no on-premises line-of-sight is required in the cloud-only baseline.</li>
+</ul>
+<h3>Desktop and application</h3>
+<ul>
+<li>workspace, desktop application group, pooled host pool, and capacity policy work;</li>
+<li>the golden image is versioned, recoverable, and supported;</li>
+<li>Office activation and Google Workspace access work for representative users;</li>
+<li>required communication, browser, and line-of-business applications pass their compatibility tests;</li>
+<li>profile containers attach, reconnect, and restore within the agreed time;</li>
+<li>printers, scanners, audio, webcams, USB, clipboard, and display behavior meet role requirements;</li>
+<li>users can reconnect after a network interruption without profile corruption; and</li>
+<li>a replacement office terminal can access the same user desktop without manual data reconstruction.</li>
+</ul>
+<h3>Security and network</h3>
+<ul>
+<li>no inbound RDP or public session-host IP is present;</li>
+<li>outbound endpoint access is documented and monitored;</li>
+<li>terminal and session-host encryption, patching, endpoint protection, and local-admin controls pass review;</li>
+<li>approved data-redirection settings are enforced;</li>
+<li>logs and actionable alerts are delivered to the administrator; and</li>
+<li>lost-terminal/session revocation is demonstrated.</li>
+</ul>
+<h3>Recovery, operations, and cost</h3>
+<ul>
+<li>the company-owned Azure subscription is associated with the production Entra tenant and has billing ownership, RBAC, budgets, alerts, policy, and activity-log controls tested;</li>
+<li>Azure Files/profile, session-host image, Google Workspace, and administrative restore tests pass;</li>
+<li>autoscale, drain mode, maintenance, and rollback procedures are documented and exercised;</li>
+<li>budgets and cost alerts fire at the approved thresholds;</li>
+<li>the support runbook can distinguish identity, client, host, profile, application, network, and Azure service faults;</li>
+<li>the three-year cost model and monthly ceiling are approved; and</li>
+<li>the complete AD DS dependency-removal gate is signed off before decommissioning.</li>
+</ul>
+<p>If optional SharePoint/Teams, workflows, Copilot, FAQ-agent, MAM, Arc, or other Azure services are enabled, their owner, cost boundary, security controls, support procedure, and acceptance evidence must also be approved.</p>
+<h3>Optional mobility</h3>
+<p>If remote work or portability is enabled, also verify approved external-device policy, MFA, Conditional Access, session revocation, performance, peripherals, download/clipboard controls, and the incremental cost. If not enabled, record that it is intentionally out of scope and do not treat its absence as a failure.</p>
+<h2>14. Decisions required before implementation</h2>
+<ol>
+<li>Is centralized Windows desktop delivery a confirmed business requirement, or is the objective only AD retirement?</li>
+<li>Which company-owned Azure subscription, tenant association, billing owner, and region will own the service?</li>
+<li>Are six Microsoft 365 Business Premium with Teams licenses approved as the AVD baseline, and which users require them?</li>
+<li>What user concurrency, application mix, and performance target determine session-host sizing?</li>
+<li>Is a pooled host pool acceptable, and is one-host risk acceptable for pilot or production?</li>
+<li>Which applications and peripherals must run inside the hosted session?</li>
+<li>Will Google Workspace be browser-first, or is Google Drive for desktop required in the multi-session image?</li>
+<li>Does the selected Azure Files/Entra Kerberos/FSLogix path pass the cloud-only pilot?</li>
+<li>Which Microsoft, Windows, AVD, Office, Google, and third-party licenses are already owned and eligible?</li>
+<li>Will session hosts and terminals be enrolled in Intune, and what additional security tool is required?</li>
+<li>What monthly operating-cost ceiling, RTO, RPO, and support arrangement are approved?</li>
+<li>Is optional remote work or user/device portability enabled now, deferred, or limited to managed devices?</li>
+<li>Which optional business value-adds, if any, will be approved, and who owns their data, cost, and support?</li>
+<li>Which AD DS dependencies remain, and who owns each remediation or exception?</li>
+</ol>
+<h2>15. References</h2>
+<ul>
+<li><a href="https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium">Microsoft 365 Business Premium pricing in Canada</a></li>
+<li><a href="https://www.microsoft.com/en-ca/security/business/microsoft-intune-pricing">Microsoft Intune plans and pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/intune/fundamentals/licensing">Microsoft Intune licensing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/fundamentals/licensing">Microsoft Entra licensing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/fundamentals/how-subscriptions-associated-directory">Azure subscription and Microsoft Entra tenant relationship</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-chat-requirements">Microsoft 365 Copilot Chat requirements</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-licensing">Microsoft Copilot licensing options</a></li>
+<li><a href="https://learn.microsoft.com/en-us/power-platform/admin/power-automate-licensing/types">Power Automate licensing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-messages-management">Copilot Studio billing and consumption</a></li>
+<li><a href="https://learn.microsoft.com/en-us/defender-business/mdb-overview">Microsoft Defender for Business overview</a></li>
+<li><a href="https://workspace.google.com/intl/en_ca/business/">Google Workspace pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/licensing">Azure Virtual Desktop licensing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/understand-estimate-costs">Understand and estimate Azure Virtual Desktop costs</a></li>
+<li><a href="https://azure.microsoft.com/en-ca/pricing/calculator/">Azure Pricing Calculator</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/prerequisites">Azure Virtual Desktop prerequisites</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/bastion/">Azure Bastion documentation</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/azure-arc/servers/overview">Azure Arc-enabled servers overview</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/update-manager/overview">Azure Update Manager overview</a></li>
+<li><a href="https://azure.microsoft.com/en-us/pricing/details/azure-arc/core-control-plane/">Azure Arc pricing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/deploy-azure-virtual-desktop">Deploy Azure Virtual Desktop</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/azure-ad-joined-session-hosts">Azure-joined session hosts</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/authentication">Azure Virtual Desktop authentication</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/configure-single-sign-on">Configure single sign-on for Azure Virtual Desktop</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/network-connectivity">Azure Virtual Desktop network connectivity</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/rdp-shortpath">RDP Shortpath for Azure Virtual Desktop</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/security-recommendations">Azure Virtual Desktop security recommendations</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/autoscale-create-assign-scaling-plan">Create and assign an autoscale scaling plan</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/fslogix-profile-containers">FSLogix profile containers for Azure Virtual Desktop</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/store-fslogix-profile">Store FSLogix profile containers on Azure Files</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/storage/files/storage-files-identity-auth-hybrid-identities-enable">Enable Microsoft Entra Kerberos authentication for Azure Files</a></li>
+<li><a href="https://learn.microsoft.com/en-us/fslogix/how-to-configure-profile-container-entra-id-hybrid">Configure FSLogix profile containers with Azure Files and Microsoft Entra ID</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/architecture/example-scenario/azure-virtual-desktop/azure-virtual-desktop-multi-region-bcdr">Azure Virtual Desktop multi-region business continuity</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/well-architected/pillars">Azure Well-Architected Framework pillars</a></li>
+</ul>
+
+    </div>
+  </article>
+</main>
+
+  <script src="../../site.js?v=639257110262405759" defer></script>
+</body>
+</html>

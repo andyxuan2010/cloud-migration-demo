@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- GENERATED_DOCUMENTATION_SITE -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture and requirements guidance for moving a small-business Windows environment from on-premises Active Directory to cloud-native identity, endpoint, and desktop services.">
+  <meta name="color-scheme" content="light dark">
+  <title>Solution 1 — Microsoft Entra ID + Intune · Cloud Migration Demo</title>
+  <link rel="stylesheet" href="../../styles.css?v=639257110262405759">
+</head>
+<body data-index-path="../../index.html">
+  <header class="topbar">
+    <nav class="global-nav" aria-label="Primary">
+      <a href="https://andyxuan.ca/">Home</a>
+      <a href="https://andyxuan.ca/docs/">▤ Library</a>
+      <a href="https://github.com/andyxuan2010/cloud-migration-demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+    <a class="brand" href="../../index.html" aria-label="Documentation home">
+      <span class="brand-mark" aria-hidden="true">CM</span>
+      <span class="brand-text">Cloud Migration Demo <small>CCOE Azure documentation</small></span>
+    </a>
+    <div class="header-tools">
+      <div class="language-switch" aria-label="Language selection">
+        <span class="active" aria-current="true">EN</span>
+        <span aria-disabled="true">FR</span>
+        <span aria-disabled="true">中</span>
+      </div>
+      <button class="icon-button" id="themeButton" type="button" aria-label="Toggle dark mode" title="Toggle color theme">◐</button>
+    </div>
+  </header>
+
+  <main class="reader-view">
+  <div class="reader-navigation">
+    <a class="back-button" href="../../index.html">← All documents</a>
+    <span class="reader-path">docs/30-deployment/solution-1-implementation-action-plan.md</span>
+  </div>
+  <article class="reader">
+    <div class="reader-tools">
+      <span class="file-label">docs/30-deployment/solution-1-implementation-action-plan.md</span>
+      <a class="github-link" href="https://github.com/andyxuan2010/cloud-migration-demo/blob/main/docs/30-deployment/solution-1-implementation-action-plan.md" target="_blank" rel="noopener">View source on GitHub ↗</a>
+    </div>
+    <div class="markdown-body">
+    <h2>Detailed implementation action plan</h2>
+<p>This runbook is the execution companion to the <a href="../10-architecture/entra-id-intune-architecture.html">Solution 1 architecture</a>. It converts the phase estimate into an ordered implementation checklist for the approved baseline: one company-owned Microsoft Entra tenant, one company-owned Azure subscription, six Microsoft 365 Business Premium with Teams licenses, and up to 10 supported Windows 11 Pro PCs. The implementation owner should maintain the task status, evidence link, issue log, and decision owner for every row. Do not place passwords, recovery codes, private keys, or other secrets in the project repository.</p>
+<p>The implementation uses Entra join for the Windows sign-in boundary and Intune for device policy, compliance, encryption, application, update, and inventory control. Conditional Access decisions use Entra signals and Intune compliance data; this is why the Business Premium baseline must be active before production enrollment. See the <a href="https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join">Microsoft Entra joined device guidance</a>, <a href="https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide">Intune Windows enrollment guide</a>, and <a href="https://learn.microsoft.com/en-us/intune/device-security/conditional-access-integration/overview">Intune Conditional Access guidance</a>.</p>
+<p>The task-level ranges below roll up to the architecture document’s <strong>36–54-hour</strong> baseline implementation estimate; they are hands-on effort estimates, not calendar duration. They assume a clean six-user implementation with simple Windows profiles, supported applications, and no major AD-hosted dependency remediation.</p>
+<h3>Execution checklist</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Action and validation</th>
+<th>Primary owner</th>
+<th>Dependency</th>
+<th>Effort</th>
+<th>Evidence / exit condition</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>P0.1</strong></td>
+<td>Hold kickoff; confirm sponsor, implementation owner, support contact, user/device count, business-critical applications, success measures, out-of-scope items, and decision/escalation path.</td>
+<td>Business owner + implementer</td>
+<td>None</td>
+<td>1–1.5 h</td>
+<td>Approved scope, RACI, contact list, and change calendar</td>
+</tr>
+<tr>
+<td><strong>P0.2</strong></td>
+<td>Inventory AD DS users, groups, computers, GPOs, DNS, DHCP, file/print services, certificates, VPN/RADIUS, scripts, scheduled tasks, service accounts, backup agents, and management tools.</td>
+<td>Implementer</td>
+<td>P0.1</td>
+<td>2–3 h</td>
+<td>Discovery register with owner and dependency status for each item</td>
+</tr>
+<tr>
+<td><strong>P0.3</strong></td>
+<td>Inventory every PC’s Windows edition/build, TPM/Secure Boot, disk space, local profile/data, applications, peripherals, encryption, local administrators, and replacement status.</td>
+<td>Implementer + user representatives</td>
+<td>P0.1</td>
+<td>1–1.5 h</td>
+<td>Device register and exception list; no unknown production device remains</td>
+</tr>
+<tr>
+<td><strong>P0.4</strong></td>
+<td>Define data ownership, backup/restore method, RPO/RTO, migration batches, rollback window, stabilization period, user-acceptance tests, and AD DS retirement gate.</td>
+<td>Business owner + implementer</td>
+<td>P0.2–P0.3</td>
+<td>1–1 h</td>
+<td>Signed design decision, test matrix, rollback plan, and approval to build</td>
+</tr>
+<tr>
+<td><strong>P1.1</strong></td>
+<td>Create or reuse the single company-owned Entra workforce tenant; verify the corporate domain; create or associate the company-owned Azure subscription under the approved billing account.</td>
+<td>Tenant/billing owner</td>
+<td>P0.4</td>
+<td>1–1.5 h</td>
+<td>Tenant ID, subscription ID, verified domain, and documented company ownership</td>
+</tr>
+<tr>
+<td><strong>P1.2</strong></td>
+<td>Create named administrative accounts, two protected emergency-access accounts, MFA/recovery methods, and separate billing, subscription-owner, contributor, and read-only support roles.</td>
+<td>Identity owner</td>
+<td>P1.1</td>
+<td>1–1.5 h</td>
+<td>Tested sign-in and recovery record; no personal account is the sole owner</td>
+</tr>
+<tr>
+<td><strong>P1.3</strong></td>
+<td>Purchase and assign six Business Premium with Teams licenses; create user, device, pilot, standard, exception, and administrator groups; confirm Google account matching and service ownership.</td>
+<td>Identity owner</td>
+<td>P1.1–P1.2</td>
+<td>1–1.5 h</td>
+<td>License assignment report and group membership register</td>
+</tr>
+<tr>
+<td><strong>P1.4</strong></td>
+<td>Configure Azure tags, budget, cost alerts, subscription activity logging, policy controls, support contacts, and the rule that blocks unapproved resource deployment.</td>
+<td>Azure owner</td>
+<td>P1.1–P1.2</td>
+<td>2–2.5 h</td>
+<td>Budget alert test, RBAC export, policy result, and governance checklist</td>
+</tr>
+<tr>
+<td><strong>P2.1</strong></td>
+<td>Configure Intune MDM authority, enrollment restrictions, automatic enrollment, device categories, naming approach, and Pilot/Standard/Exception assignments.</td>
+<td>Intune owner</td>
+<td>P1.2–P1.3</td>
+<td>1–1.5 h</td>
+<td>Enrollment test plan and correctly scoped assignments</td>
+</tr>
+<tr>
+<td><strong>P2.2</strong></td>
+<td>Create the security and compliance baseline: password/lockout, Defender settings, firewall, attack-surface controls appropriate to scope, BitLocker escrow, Windows LAPS, update rings, and compliance rules.</td>
+<td>Intune/security owner</td>
+<td>P2.1</td>
+<td>3–4 h</td>
+<td>Policy register, successful policy check-in, escrow evidence, and exception record</td>
+</tr>
+<tr>
+<td><strong>P2.3</strong></td>
+<td>Package or document approved applications; configure Office, browser, Windows features, printers/scanners, local-standard-user behavior, update rings, and required configuration profiles.</td>
+<td>Intune/application owner</td>
+<td>P2.1–P2.2</td>
+<td>3–4 h</td>
+<td>Application deployment results and device configuration export</td>
+</tr>
+<tr>
+<td><strong>P2.4</strong></td>
+<td>Enroll a clean test PC; verify Entra join, Intune check-in, compliance, BitLocker recovery, LAPS retrieval, application deployment, updates, reporting, and help-desk procedures.</td>
+<td>Intune owner + pilot user</td>
+<td>P2.2–P2.3</td>
+<td>2–2.5 h</td>
+<td>Pilot device passes the technical baseline before production migration</td>
+</tr>
+<tr>
+<td><strong>P3.1</strong></td>
+<td>Confirm Google Workspace edition, verified domain, administrator recovery path, user identifiers, SAML attributes, time synchronization, and federation failure requirements.</td>
+<td>Google administrator + identity owner</td>
+<td>P1.1–P1.3</td>
+<td>1–1 h</td>
+<td>Federation prerequisites and account-matching decision recorded</td>
+</tr>
+<tr>
+<td><strong>P3.2</strong></td>
+<td>Configure the Entra enterprise application and Google Workspace SAML settings; apply the approved sign-in assignment and document the emergency direct Google administrator path.</td>
+<td>Identity owner</td>
+<td>P3.1</td>
+<td>1–2 h</td>
+<td>Test user completes the Entra-to-Google redirect and receives the expected assertion</td>
+</tr>
+<tr>
+<td><strong>P3.3</strong></td>
+<td>Test Google sign-in, sign-out, MFA/Conditional Access, Drive, Docs, Gmail, shared drives, browser sessions, account suspension, recovery, and optional provisioning.</td>
+<td>Identity owner + pilot user</td>
+<td>P3.2</td>
+<td>2–3 h</td>
+<td>Authentication test evidence; provisioning is enabled only if mapping and recovery tests pass</td>
+</tr>
+<tr>
+<td><strong>P4.1</strong></td>
+<td>Select one low-risk user and PC; capture the pre-migration state, back up required data, verify restore, record applications/peripherals, and notify the pilot user.</td>
+<td>Implementer + pilot user</td>
+<td>P2.4–P3.3</td>
+<td>1–1 h</td>
+<td>Backup/restore evidence, baseline capture, and approved pilot window</td>
+</tr>
+<tr>
+<td><strong>P4.2</strong></td>
+<td>Migrate or rebuild the pilot profile using the approved method; join the PC to Entra ID, enroll it in Intune, apply policies, restore user data, and remove unnecessary local administrator access.</td>
+<td>Implementer</td>
+<td>P4.1</td>
+<td>2–3 h</td>
+<td>Pilot device is Entra joined, Intune managed, encrypted, compliant, and usable</td>
+</tr>
+<tr>
+<td><strong>P4.3</strong></td>
+<td>Run pilot acceptance: Windows sign-in, MFA, Office, Google Workspace, applications, printing, scanning, communications, updates, recovery, and support escalation. Remediate defects and obtain the production go decision.</td>
+<td>Business owner + pilot user</td>
+<td>P4.2</td>
+<td>2–3 h</td>
+<td>Signed pilot acceptance or documented rollback/exception decision</td>
+</tr>
+<tr>
+<td><strong>P5.1</strong></td>
+<td>Create the production batch schedule, user communications, per-device rollback checkpoints, support coverage, maintenance window, and migration ledger.</td>
+<td>Project owner</td>
+<td>P4.3</td>
+<td>1–1 h</td>
+<td>Approved batch plan and user/device sequence</td>
+</tr>
+<tr>
+<td><strong>P5.2</strong></td>
+<td>Migrate one or two PCs per batch: back up, migrate/rebuild profile, Entra join, Intune-enroll, apply policies, restore data, validate applications, and record exceptions.</td>
+<td>Implementer</td>
+<td>P5.1</td>
+<td>2–3 h</td>
+<td>Each device has a completed migration record and a named acceptance result</td>
+</tr>
+<tr>
+<td><strong>P5.3</strong></td>
+<td>Obtain user acceptance for each batch; confirm compliance, BitLocker escrow, LAPS, application/peripheral operation, Google SSO, and support readiness before continuing.</td>
+<td>User representative + implementer</td>
+<td>P5.2</td>
+<td>1–2 h</td>
+<td>Batch sign-off; failed devices remain on the rollback path</td>
+</tr>
+<tr>
+<td><strong>P6.1</strong></td>
+<td>Move DHCP and DNS forwarding to the router/firewall or approved managed service; test reservations, name resolution, time synchronization, and Internet/service reachability.</td>
+<td>Network owner</td>
+<td>P5.3</td>
+<td>1–2 h</td>
+<td>Network change record and tests from every production segment</td>
+</tr>
+<tr>
+<td><strong>P6.2</strong></td>
+<td>Migrate or retire file shares, mapped drives, print queues, certificates, VPN/RADIUS, scripts, scheduled tasks, service accounts, backup agents, and management dependencies.</td>
+<td>Implementer + application owners</td>
+<td>P0.2, P5.3</td>
+<td>1–2 h</td>
+<td>Dependency register shows a replacement, retirement, or approved waiver for every item</td>
+</tr>
+<tr>
+<td><strong>P6.3</strong></td>
+<td>Run the full dependency-removal test from production PCs, including offline/reconnect behavior, printers, scanners, business applications, backup, restore, and administrator recovery.</td>
+<td>Implementer + business owner</td>
+<td>P6.1–P6.2</td>
+<td>1–1 h</td>
+<td>AD DS retirement gate is fully evidenced; no critical dependency remains</td>
+</tr>
+<tr>
+<td><strong>P7.1</strong></td>
+<td>Observe the migrated environment through the approved stabilization period; review identity, device, security, backup, network, application, cost, and Azure subscription alerts.</td>
+<td>Support owner</td>
+<td>P5.3–P6.3</td>
+<td>0.5–1.5 h</td>
+<td>Stabilization log with incidents, resolutions, and accepted residual risks</td>
+</tr>
+<tr>
+<td><strong>P7.2</strong></td>
+<td>Perform a controlled domain-controller shutdown test during the approved rollback window; verify that users, applications, DNS/DHCP, backup, and support procedures continue to work.</td>
+<td>Implementer + business owner</td>
+<td>P6.3, P7.1</td>
+<td>0.25–1.5 h</td>
+<td>Shutdown test passes or rollback is executed and documented</td>
+</tr>
+<tr>
+<td><strong>P7.3</strong></td>
+<td>Demote and retire AD DS only after the gate passes; retain the approved backup, remove obsolete dependencies, revoke unused accounts, update diagrams/runbooks, and obtain final acceptance.</td>
+<td>Implementer + business owner</td>
+<td>P7.2</td>
+<td>0.25–1 h</td>
+<td>Demotion record, retained-backup record, final documentation, and sign-off</td>
+</tr>
+</tbody></table>
+<h3>Go/no-go gates</h3>
+<table><thead><tr>
+<th>Gate</th>
+<th>Required decision</th>
+<th>Minimum evidence</th>
+<th>If the gate fails</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>G0 — Design approval</strong></td>
+<td>Scope, baseline licenses, tenant/subscription ownership, RPO/RTO, rollback, and acceptance tests are approved.</td>
+<td>Signed decision record and implementation window</td>
+<td>Remain in discovery; do not create production policies or migrate devices</td>
+</tr>
+<tr>
+<td><strong>G1 — Foundation ready</strong></td>
+<td>Tenant, domain, Business Premium licenses, admins, recovery, Azure RBAC, budgets, alerts, and governance are operational.</td>
+<td>Tenant/subscription register, license report, RBAC export, alert test</td>
+<td>Correct ownership, licensing, or governance before enrollment</td>
+</tr>
+<tr>
+<td><strong>G2 — Pilot ready</strong></td>
+<td>Intune baseline, Entra join, MFA/Conditional Access, encryption, LAPS, updates, apps, and Google SAML pass technical tests.</td>
+<td>Pilot device evidence and authentication test record</td>
+<td>Correct policies or application packaging; keep production PCs unchanged</td>
+</tr>
+<tr>
+<td><strong>G3 — Production migration</strong></td>
+<td>Pilot user accepts the experience and rollback has been tested.</td>
+<td>Pilot sign-off and approved batch schedule</td>
+<td>Roll back the pilot or hold the next batch</td>
+</tr>
+<tr>
+<td><strong>G4 — AD DS retirement</strong></td>
+<td>All dependency-removal, network, backup/restore, user, application, and support tests pass.</td>
+<td>Completed dependency register and shutdown test</td>
+<td>Keep AD DS available; remediate or formally waive the dependency</td>
+</tr>
+<tr>
+<td><strong>G5 — Handover</strong></td>
+<td>The environment is stable, recurring cost is within budget, and the business can operate the service.</td>
+<td>Runbooks, registers, diagrams, support contacts, and sign-off</td>
+<td>Extend stabilization and close documentation gaps</td>
+</tr>
+</tbody></table>
+<h3>Required implementation evidence</h3>
+<p>Maintain one controlled evidence register containing the discovery/dependency inventory, user and device migration ledger, tenant and Azure subscription ownership record, license assignment report, RBAC and emergency-access record, policy/configuration register, authentication and device test results, backup/restore evidence, change/rollback log, cost and license register, incident/stabilization log, and final business acceptance. Store sensitive recovery material in the approved password manager or recovery process, not in Markdown, source control, or screenshots.</p>
+
+    </div>
+  </article>
+</main>
+
+  <script src="../../site.js?v=639257110262405759" defer></script>
+</body>
+</html>

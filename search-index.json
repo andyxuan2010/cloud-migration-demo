@@ -1,0 +1,42 @@
+[
+  {
+    "title": "Cloud Identity and Desktop Modernization Options",
+    "path": "docs/90-decisions/cloud-identity-migration-options.html",
+    "summary": "**Document status:** Draft v0.1"
+  },
+  {
+    "title": "Cloud Migration Demo for Small Business",
+    "path": "docs/readme.html",
+    "summary": "Architecture and requirements documentation for modernizing a small-business Windows environment and retiring its on-premises Active Directory Domain Services (AD DS) dependency."
+  },
+  {
+    "title": "Small-Business Cloud Identity and Endpoint Requirements",
+    "path": "docs/90-decisions/requirements.html",
+    "summary": "**Document status:** Draft v0.3"
+  },
+  {
+    "title": "Solution 1 — Microsoft Entra ID + Intune",
+    "path": "docs/30-deployment/solution-1-implementation-action-plan.html",
+    "summary": "This runbook is the execution companion to the Solution 1 architecture. It converts the phase estimate into an ordered implementation checklist for the approved baseline: one company-owne…"
+  },
+  {
+    "title": "Solution 1 — Microsoft Entra ID + Microsoft Intune",
+    "path": "docs/10-architecture/entra-id-intune-architecture.html",
+    "summary": "**Design scope:** 6-10 Windows 11 PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Serv…"
+  },
+  {
+    "title": "Solution 2 — Google Workspace + GCPW + Windows Device Management",
+    "path": "docs/10-architecture/google-workspace-gcpw-architecture.html",
+    "summary": "**Design scope:** 10 Windows PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services…"
+  },
+  {
+    "title": "Solution 3 — Azure Virtual Desktop",
+    "path": "docs/30-deployment/solution-3-implementation-action-plan.html",
+    "summary": "This runbook is the execution companion to the Solution 3 architecture. It converts the phase estimate into an ordered implementation checklist for the approved baseline: one company-owne…"
+  },
+  {
+    "title": "Solution 3 — Azure Virtual Desktop (AVD) with Office PCs as Access Terminals",
+    "path": "docs/10-architecture/azure-virtual-desktop-architecture.html",
+    "summary": "**Design scope:** 10 Windows PCs, six initial users, currently joined to on-premises AD DS, Google Workspace as the selected/retained SaaS platform when used, Microsoft Office, communicat…"
+  }
+]

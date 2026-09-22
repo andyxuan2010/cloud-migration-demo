@@ -1,13 +1,14 @@
 {
-  "generatedAt": "2026-09-18T01:44:38Z",
   "documents": [
-    "docs/azure_virtual_desktop_architecture.md",
-    "docs/cloud_identity_migration_options.md",
-    "docs/entra_id_intune_architecture.md",
-    "docs/google_workspace_gcpw_architecture.md",
-    "docs/README.md",
-    "docs/requirements.md",
-    "docs/solution_1_implementation_action_plan.md",
-    "docs/solution_3_implementation_action_plan.md"
-  ]
+    "docs/10-architecture/azure-virtual-desktop-architecture.md",
+    "docs/10-architecture/entra-id-intune-architecture.md",
+    "docs/10-architecture/google-workspace-gcpw-architecture.md",
+    "docs/30-deployment/solution-1-implementation-action-plan.md",
+    "docs/30-deployment/solution-3-implementation-action-plan.md",
+    "docs/90-decisions/cloud-identity-migration-options.md",
+    "docs/90-decisions/requirements.md",
+    "docs/README.md"
+  ],
+  "generatedAt": "09/22/2026 22:01:01",
+  "contentHash": "b9501b99ad400019ce4d14b7401617e892ed371465d7e7e2d79f72ede4241f25"
 }

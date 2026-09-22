@@ -40,4 +40,33 @@ foreach ($asset in $sourceAssets) {
     }
 }
 
+$htmlFiles = @(Get-ChildItem -LiteralPath $outputRoot -Recurse -File -Filter "*.html" |
+    Where-Object {
+        $content = Get-Content -LiteralPath $_.FullName -Raw
+        $content -match 'GENERATED_DOCUMENTATION_SITE' -and $content -notmatch '\{\{[A-Z_]+\}\}'
+    })
+foreach ($htmlFile in $htmlFiles) {
+    $html = Get-Content -LiteralPath $htmlFile.FullName -Raw
+    $references = [regex]::Matches($html, '(?i)(?:href|src)="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+    foreach ($reference in $references) {
+        $reference = $reference.Trim()
+        if (-not $reference -or $reference.StartsWith("#") -or $reference -match '^(?i)(?:[a-z][a-z0-9+.-]*:|//)') {
+            continue
+        }
+
+        $pathPart = ($reference -split '[?#]', 2)[0]
+        if (-not $pathPart) { continue }
+        $candidate = if ($pathPart.StartsWith("/")) {
+            Join-Path $outputRoot $pathPart.TrimStart('/')
+        } else {
+            Join-Path $htmlFile.DirectoryName $pathPart
+        }
+        $candidate = [System.IO.Path]::GetFullPath($candidate)
+        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            $relativeHtml = [System.IO.Path]::GetRelativePath($outputRoot, $htmlFile.FullName)
+            throw "Generated page $relativeHtml contains a broken local reference: $reference"
+        }
+    }
+}
+
 Write-Host "Documentation site validation passed for $($documents.Count) Markdown documents."

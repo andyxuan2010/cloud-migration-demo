@@ -1,0 +1,1400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- GENERATED_DOCUMENTATION_SITE -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture and requirements guidance for moving a small-business Windows environment from on-premises Active Directory to cloud-native identity, endpoint, and desktop services.">
+  <meta name="color-scheme" content="light dark">
+  <title>Small-Business Cloud Identity and Endpoint Requirements · Cloud Migration Demo</title>
+  <link rel="stylesheet" href="../../styles.css?v=639257110262405759">
+</head>
+<body data-index-path="../../index.html">
+  <header class="topbar">
+    <nav class="global-nav" aria-label="Primary">
+      <a href="https://andyxuan.ca/">Home</a>
+      <a href="https://andyxuan.ca/docs/">▤ Library</a>
+      <a href="https://github.com/andyxuan2010/cloud-migration-demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+    <a class="brand" href="../../index.html" aria-label="Documentation home">
+      <span class="brand-mark" aria-hidden="true">CM</span>
+      <span class="brand-text">Cloud Migration Demo <small>CCOE Azure documentation</small></span>
+    </a>
+    <div class="header-tools">
+      <div class="language-switch" aria-label="Language selection">
+        <span class="active" aria-current="true">EN</span>
+        <span aria-disabled="true">FR</span>
+        <span aria-disabled="true">中</span>
+      </div>
+      <button class="icon-button" id="themeButton" type="button" aria-label="Toggle dark mode" title="Toggle color theme">◐</button>
+    </div>
+  </header>
+
+  <main class="reader-view">
+  <div class="reader-navigation">
+    <a class="back-button" href="../../index.html">← All documents</a>
+    <span class="reader-path">docs/90-decisions/requirements.md</span>
+  </div>
+  <article class="reader">
+    <div class="reader-tools">
+      <span class="file-label">docs/90-decisions/requirements.md</span>
+      <a class="github-link" href="https://github.com/andyxuan2010/cloud-migration-demo/blob/main/docs/90-decisions/requirements.md" target="_blank" rel="noopener">View source on GitHub ↗</a>
+    </div>
+    <div class="markdown-body">
+    <p><strong>Document status:</strong> Draft v0.3 <strong>Environment:</strong> Lightweight small-business corporate network <strong>Scope:</strong> 10 Windows PCs, currently joined to on-premises Active Directory <strong>Primary SaaS platform:</strong> Google Workspace <strong>Date:</strong> 2026-08-30</p>
+<h2>1. Purpose</h2>
+<p>This document defines the business, functional, security, technical, operational, migration, and acceptance requirements for modernizing a small-business Windows environment and removing its dependency on an on-premises Active Directory Domain Services (AD DS) server.</p>
+<p>The requirements are intentionally solution-neutral. They provide a common baseline against which the following types of solutions can be evaluated:</p>
+<ul>
+<li>cloud identity and modern endpoint management;</li>
+<li>Google-centric Windows authentication and management; and</li>
+<li>centrally hosted or virtual desktops.</li>
+</ul>
+<p>This document does not select a product, prescribe a detailed architecture, or provide a cost estimate.</p>
+<h2>2. Requirement terminology</h2>
+<table><thead><tr>
+<th>Priority</th>
+<th>Meaning</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Must</strong></td>
+<td>Mandatory. The solution cannot be accepted if the requirement is not satisfied or formally waived with a documented risk.</td>
+</tr>
+<tr>
+<td><strong>Conditional Must</strong></td>
+<td>Mandatory only when the stated optional capability, such as mobility or BYOD, is enabled.</td>
+</tr>
+<tr>
+<td><strong>Should</strong></td>
+<td>Important. The solution should satisfy the requirement unless cost, complexity, or a documented constraint justifies an alternative.</td>
+</tr>
+<tr>
+<td><strong>Could</strong></td>
+<td>Optional improvement. Implement when it provides sufficient value.</td>
+</tr>
+</tbody></table>
+<p>Each requirement has a unique identifier for traceability during solution design, testing, and approval.</p>
+<h2>3. Current environment</h2>
+<h3>3.1 Confirmed characteristics</h3>
+<table><thead><tr>
+<th>Area</th>
+<th>Current state</th>
+</tr></thead><tbody>
+<tr>
+<td>Organization size</td>
+<td>Lightweight small-business corporate environment</td>
+</tr>
+<tr>
+<td>Endpoints</td>
+<td>10 company-used Windows PCs</td>
+</tr>
+<tr>
+<td>Operating system</td>
+<td>Windows 10-based</td>
+</tr>
+<tr>
+<td>Device identity</td>
+<td>All PCs are joined to the on-premises AD DS domain</td>
+</tr>
+<tr>
+<td>Primary productivity platform</td>
+<td>Google Workspace, including Gmail, Google Drive, Google Docs, and other SaaS applications</td>
+</tr>
+<tr>
+<td>Other applications</td>
+<td>Microsoft Office, communication tools, browsers, and potentially other locally installed business applications</td>
+</tr>
+<tr>
+<td>Office model</td>
+<td>PCs remain in the office on the existing LAN unless an approved virtual-desktop option changes their role to access terminals</td>
+</tr>
+<tr>
+<td>Target direction</td>
+<td>Cloud-first identity, management, applications, and data with removal of the local AD server</td>
+</tr>
+</tbody></table>
+<h3>3.2 Mandatory Windows 10 lifecycle constraint</h3>
+<p>Windows 10 reached end of support on October 14, 2025. Standard Windows 10 installations no longer receive routine security updates or technical support. Commercial Extended Security Updates (ESU) provide a temporary paid bridge, not a valid permanent target state.</p>
+<p>Accordingly:</p>
+<ul>
+<li>every PC must be assessed for Windows 11 compatibility;</li>
+<li>compatible PCs must be upgraded to a supported Windows 11 Pro or Enterprise release;</li>
+<li>incompatible PCs must be replaced, repurposed as appropriately secured access terminals, or covered temporarily by eligible commercial Windows 10 ESU;</li>
+<li>unsupported Windows 10 PCs without ESU must not be approved as production endpoints; and</li>
+<li>the migration plan must include a dated Windows 10 retirement schedule.</li>
+</ul>
+<p>This is a security requirement, not an optional modernization preference.</p>
+<h2>4. Project objectives</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>OBJ‑01</td>
+<td>Remove the need to operate an on-premises AD DS domain controller.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑02</td>
+<td>Preserve secure and reliable access to Google Workspace, Microsoft Office, communication tools, and approved business applications.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑03</td>
+<td>Retain existing PCs when they meet security, performance, lifecycle, and compatibility requirements.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>OBJ‑04</td>
+<td>Reduce infrastructure and administration appropriate to an organization with only 10 PCs.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑05</td>
+<td>Use cloud services and SaaS rather than introduce replacement on-premises servers.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑06</td>
+<td>Avoid unnecessary enterprise-scale complexity, duplicated platforms, and overlapping licenses.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>OBJ‑07</td>
+<td>Provide a controlled, testable, and reversible migration with minimal disruption.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑08</td>
+<td>Establish repeatable operations for onboarding, offboarding, device replacement, patching, support, backup, and recovery.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑09</td>
+<td>Optionally allow approved users to resume work from an approved secondary device or external location without dependency on the office domain controller.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OBJ‑10</td>
+<td>Keep the target environment lightweight, stable, low-cost, and maintainable without a full-time specialist.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑11</td>
+<td>Prefer supported managed services and standard configuration over custom servers, scripts, or bespoke integration.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>OBJ‑12</td>
+<td>Preserve an exit path by maintaining data export, configuration documentation, and vendor-independent ownership of domains and identities.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OBJ‑13</td>
+<td>Treat remote work and user/device portability as optional ideal-state capabilities, enabled only when their business value justifies the incremental cost and administration.</td>
+<td>Could</td>
+</tr>
+</tbody></table>
+<h2>5. Scope</h2>
+<h3>5.1 In scope</h3>
+<ul>
+<li>Current AD users, groups, computers, and policies required by the business</li>
+<li>10 Windows endpoints and their assigned users</li>
+<li>Cloud identity and user authentication</li>
+<li>Windows sign-in and endpoint management</li>
+<li>Google Workspace access and identity integration</li>
+<li>Microsoft Office licensing and deployment</li>
+<li>SaaS and communication-tool access</li>
+<li>User profiles, local files, shared files, browser data, and required application settings</li>
+<li>Endpoint protection, disk encryption, patching, compliance, and inventory</li>
+<li>Optional remote work and user/device portability for approved users, devices, and locations</li>
+<li>Mandatory recoverability of business data, configuration, administrative control, and essential user operations</li>
+<li>DNS, DHCP, file, print, certificate, VPN, RADIUS, script, scheduled-task, and service-account dependencies currently hosted by or dependent on the AD server</li>
+<li>Backup, recovery, monitoring, documentation, cutover, rollback, and AD decommissioning</li>
+</ul>
+<h3>5.2 Out of scope unless discovery proves otherwise</h3>
+<ul>
+<li>New custom application development</li>
+<li>Replacement of business SaaS products that already meet requirements</li>
+<li>Enterprise-scale high availability or multi-region disaster recovery</li>
+<li>Complex virtual desktop infrastructure unless selected as the target solution</li>
+<li>New office cabling, Wi-Fi replacement, or firewall replacement unless the current equipment cannot meet the requirements</li>
+<li>Formal regulatory certification or audit work unless a specific obligation is identified</li>
+<li>Mobile-device management beyond what is necessary to protect corporate SaaS access</li>
+</ul>
+<h2>6. Business and usability requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>BUS‑01</td>
+<td>Each employee must have an individual corporate account. Routine use of shared user accounts is prohibited.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑02</td>
+<td>Users must be able to access Gmail, Google Drive, Google Docs, Microsoft Office, communication tools, printers, scanners, and other approved applications required by their roles.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑03</td>
+<td>The normal sign-in process should require one primary corporate identity and minimize repeated authentication across approved services.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>BUS‑04</td>
+<td>A user must be able to resume normal work on a replacement PC using a documented provisioning process.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑05</td>
+<td>Planned migration downtime should not exceed an agreed per-user maintenance window.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑06</td>
+<td>The target service must support at least 10 users and 10 PCs without redesign.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑07</td>
+<td>The design should support growth to approximately 20 users or devices through licensing and configuration changes rather than architectural replacement.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>BUS‑08</td>
+<td>The target operating model must be supportable remotely by a qualified administrator.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑09</td>
+<td>User training must cover the new sign-in process, MFA, password or passkey recovery, file access, and support escalation.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑10</td>
+<td>The solution must not require users to understand or administer infrastructure components.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑11</td>
+<td>Loss or replacement of one office PC must not make a user&#39;s business data or essential applications unavailable beyond the approved recovery interval.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>BUS‑12</td>
+<td>Where remote work is approved, a user may be enabled to perform normal SaaS-based work from an approved external location without first connecting to the office LAN.</td>
+<td>Could</td>
+</tr>
+</tbody></table>
+<h2>7. Target-state qualities, portability, and mobility requirements</h2>
+<p>Remote work and user/device portability are optional ideal-state capabilities, not baseline requirements and not permission for uncontrolled access from personal devices. The business may defer them without failing solution acceptance. If either capability is selected, however, its conditional security requirements become mandatory.</p>
+<p>Business continuity is not optional. The ability to replace a failed PC, recover corporate data, retain company control of domains and tenants, restore administrative access, and transfer support providers is classified as recoverability and ownership rather than remote-work portability.</p>
+<p>The design priority is: mandatory business and security needs first; then stability and recoverability; then simplicity and low operating cost; then optional mobility enhancements. Portability and mobility must not introduce servers, virtual-desktop infrastructure, duplicate management platforms, premium licenses, or recurring specialist effort unless the resulting business benefit is documented and proportionate to a 10 PC environment.</p>
+<h3>7.1 Lightweight infrastructure and maintainability</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>NFR‑01</td>
+<td>The permanent target should contain no customer-managed domain controller or general-purpose infrastructure server unless a confirmed business application requires it.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>NFR‑02</td>
+<td>The number of identity, endpoint-management, security, backup, and monitoring platforms must be minimized. Each additional platform must address a documented gap.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NFR‑03</td>
+<td>The design must favor supported SaaS and managed services over self-hosted servers and custom components.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NFR‑04</td>
+<td>Routine administration for up to 10 users and PCs should normally require no more than approximately four hours per month, excluding incidents, projects, and major upgrades.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>NFR‑05</td>
+<td>Common operations must be executable through documented administrative procedures without custom development.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NFR‑06</td>
+<td>Configuration must use standard policies, groups, templates, or repeatable automation rather than undocumented one-off settings on individual PCs.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NFR‑07</td>
+<td>The business must not need a full-time cloud, Windows, or virtual-desktop specialist to operate the target environment.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NFR‑08</td>
+<td>Monitoring must be exception-based: administrators should receive actionable alerts rather than manually inspect every system each day.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>NFR‑09</td>
+<td>Product features that add continuous operational burden without satisfying a mandatory requirement should not be deployed.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>NFR‑10</td>
+<td>If selected, optional remote-work or portability features should reuse the core identity, endpoint, security, and SaaS controls rather than create a separate operating model.</td>
+<td>Conditional Must</td>
+</tr>
+</tbody></table>
+<h3>7.2 Cost control</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>CST‑01</td>
+<td>The selected solution must have an approved monthly operating-cost ceiling covering licenses, cloud resources, backup, endpoint security, and support.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>CST‑02</td>
+<td>Monthly charges must be predictable for the normal 6–10 user workload. Consumption-based services must have budgets and alerts.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>CST‑03</td>
+<td>Existing Google Workspace, Microsoft Office, Windows, security, and backup entitlements must be inventoried before new licenses are purchased.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>CST‑04</td>
+<td>Duplicate email, storage, identity, security, or endpoint-management licenses must be justified by a requirement rather than vendor bundling alone.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>CST‑05</td>
+<td>Solution selection must compare at least three-year total cost of ownership, including implementation, subscriptions, cloud consumption, hardware replacement, support, and administration.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>CST‑06</td>
+<td>Reserved capacity, long-term commitments, or premium service tiers should be purchased only after a pilot confirms sustained need.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>CST‑07</td>
+<td>Costs must be reviewable per user, per device, and per shared infrastructure component.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>CST‑08</td>
+<td>The incremental licensing, infrastructure, support, and administration cost of optional remote work or portability must be separately identified and approved before enablement.</td>
+<td>Conditional Must</td>
+</tr>
+</tbody></table>
+<h3>7.3 Stability and service continuity</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>STB‑01</td>
+<td>The target must use generally available, vendor-supported services and configurations for production workloads. Preview features must not be production dependencies.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>STB‑02</td>
+<td>A failure of one endpoint must not cause organization-wide authentication, application, or data loss.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>STB‑03</td>
+<td>No irreplaceable business data, administrative credential, recovery key, or configuration may exist only on one office PC.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>STB‑04</td>
+<td>Routine platform and endpoint maintenance must be schedulable and must not require organization-wide downtime.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>STB‑05</td>
+<td>Changes must be piloted, reversible where practical, and introduced in small batches.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>STB‑06</td>
+<td>The design must define expected behavior during Internet, SaaS, identity-provider, and endpoint-management outages.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>STB‑07</td>
+<td>Business-critical cloud dependencies must have documented vendor status pages, support routes, and local escalation procedures.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>STB‑08</td>
+<td>The solution must avoid a single undocumented administrator, personal account, or privately owned domain as a control point.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h3>7.4 User and device mobility</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>MOB‑01</td>
+<td>The architecture should permit approved users to access Gmail, Google Drive, Google Docs, communication tools, and other browser-based SaaS from an approved remote location.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>MOB‑02</td>
+<td>Remote or mobile access must use the same corporate identity, MFA, access policy, logging, and offboarding controls as office access.</td>
+<td>Conditional Must</td>
+</tr>
+<tr>
+<td>MOB‑03</td>
+<td>Approved remote work must not require direct inbound RDP, SMB, LDAP, or administrative access to the office network.</td>
+<td>Conditional Must</td>
+</tr>
+<tr>
+<td>MOB‑04</td>
+<td>The organization must define whether mobility is limited to managed corporate devices or includes BYOD. BYOD access must be restricted by documented browser, application, data-download, and session controls.</td>
+<td>Conditional Must</td>
+</tr>
+<tr>
+<td>MOB‑05</td>
+<td>Lost or stolen mobile endpoints must be blockable immediately; corporate sessions and tokens must be revocable.</td>
+<td>Conditional Must</td>
+</tr>
+<tr>
+<td>MOB‑06</td>
+<td>Users may be enabled to move between an assigned PC and an approved secondary device without manual reconstruction of business data and core SaaS access.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>MOB‑07</td>
+<td>Offline access should be limited to specifically approved data and applications, with encryption and synchronization behavior documented.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>MOB‑08</td>
+<td>Remote performance must be tested for videoconferencing, file synchronization, browser applications, and any virtual-desktop traffic before mobility is approved.</td>
+<td>Conditional Must</td>
+</tr>
+<tr>
+<td>MOB‑09</td>
+<td>If mobility is enabled, it must use direct, policy-controlled access to cloud SaaS from managed endpoints where feasible; traffic must not be routed through the office or a hosted desktop without a demonstrated application, security, or data-control requirement.</td>
+<td>Conditional Must</td>
+</tr>
+</tbody></table>
+<h3>7.5 Data ownership, recoverability, and provider portability</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>PRT‑01</td>
+<td>Corporate domains, DNS registrations, tenant ownership, billing accounts, and administrator recovery methods must remain under company control.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>PRT‑02</td>
+<td>User and shared business data must be exportable in documented, commonly usable formats within the approved recovery or exit period.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>PRT‑03</td>
+<td>Identity, group, device, application, policy, license, and administrative-role inventories must be exportable or reproducible from current documentation.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>PRT‑04</td>
+<td>Standard endpoint settings and application deployment must be reproducible on replacement hardware without relying on the original PC.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>PRT‑05</td>
+<td>The organization must maintain a documented process to transfer support responsibility to another qualified administrator or service provider.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>PRT‑06</td>
+<td>The design could minimize proprietary dependencies that provide no material business or security benefit.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>PRT‑07</td>
+<td>A vendor or product exit plan could identify how identities, data, DNS, applications, backups, and administrative access would be recovered or migrated.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>PRT‑08</td>
+<td>If user/device portability is enabled, it must not weaken security by copying unrestricted corporate data to unmanaged devices or personal accounts.</td>
+<td>Conditional Must</td>
+</tr>
+</tbody></table>
+<h2>8. Identity and access requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>IAM‑01</td>
+<td>One approved directory must be the authoritative source for employee identity and lifecycle status.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑02</td>
+<td>If both Microsoft and Google directories are retained, automated provisioning, federation, or another documented lifecycle process must prevent orphaned and inconsistent accounts.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑03</td>
+<td>Usernames and primary email addresses must follow one documented convention across Windows, Google Workspace, Microsoft services, and integrated SaaS applications.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑04</td>
+<td>MFA must be enforced for every user, with stronger authentication required for administrators.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑05</td>
+<td>Phishing-resistant methods such as FIDO2 security keys, passkeys, or certificate-backed authentication should be used where practical.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>IAM‑06</td>
+<td>At least two emergency administrative accounts must exist, be protected separately, be monitored, and be tested periodically.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑07</td>
+<td>Administrators must use separate privileged and normal user accounts.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑08</td>
+<td>Administrative privileges must follow least privilege and be assigned by role or group.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑09</td>
+<td>New-user access must be provisioned using a documented checklist.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑10</td>
+<td>Terminated-user access must be revoked promptly across the identity provider, Windows devices, Google Workspace, Microsoft services, and other SaaS applications.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑11</td>
+<td>Account recovery must not depend on a single employee, telephone number, or device.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑12</td>
+<td>Single sign-on using SAML or OpenID Connect should be enabled for supported SaaS applications.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>IAM‑13</td>
+<td>Sign-in, administrator, provisioning, and access-policy audit logs must be available and retained for an agreed period.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>IAM‑14</td>
+<td>Conditional or context-aware access should block or challenge access from noncompliant devices, high-risk sessions, or unexpected locations where licensing supports it.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>IAM‑15</td>
+<td>Shared mailboxes, group addresses, delegated Drive content, and service identities must have named owners and must not depend on an employee&#39;s personal credentials.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>9. Windows endpoint requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>END‑01</td>
+<td>Every production endpoint must run an operating system release that is supported by Microsoft or be covered temporarily by valid commercial ESU.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑02</td>
+<td>The permanent target must be a supported Windows 11 Pro, Pro for Workstations, Enterprise, or Education edition appropriate to the selected management platform.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑03</td>
+<td>Windows Home editions must be upgraded or replaced because they do not support Microsoft Entra Join and lack required business-management capabilities.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑04</td>
+<td>Every PC must be recorded in a central inventory with device name, serial number, model, assigned user, operating-system version, ownership, encryption state, compliance state, and last contact.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑05</td>
+<td>Full-disk encryption using BitLocker must be enabled on each capable device. Recovery keys must be escrowed centrally and accessible only to authorized administrators.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑06</td>
+<td>Supported antivirus or endpoint detection and response, Windows Firewall, reputation protection, and browser protections must be enabled and centrally monitored.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑07</td>
+<td>Windows quality and security updates must be deployed automatically within a defined deadline. Update status and failures must be reportable.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑08</td>
+<td>Feature upgrades must be planned, tested, and completed before the installed Windows release reaches end of service.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑09</td>
+<td>Users must not receive permanent local-administrator rights.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑10</td>
+<td>A managed support administrator account must exist on every PC, with a unique automatically rotated password or an equivalent secure mechanism.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑11</td>
+<td>Screen locking, password or PIN requirements, inactivity timeout, and failed-sign-in controls must be centrally configured.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑12</td>
+<td>Required applications and settings must be deployable through a repeatable documented method.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑13</td>
+<td>Unapproved or high-risk software must be detectable and removable.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>END‑14</td>
+<td>Lost, stolen, compromised, or retired devices must be blockable and remotely wipeable where the selected platform supports it.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑15</td>
+<td>USB storage, clipboard, local drive, printer, camera, microphone, and browser-extension controls must be configurable where business risk requires them.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>END‑16</td>
+<td>The endpoint design must preserve access to approved printers, scanners, webcams, headsets, multiple monitors, and other required peripherals.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>END‑17</td>
+<td>A replacement or rebuilt PC should be ready for normal user work within one business day after hardware availability.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>END‑18</td>
+<td>Remote support must use an approved authenticated support tool. Direct Internet exposure of RDP is prohibited.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>10. Google Workspace and SaaS requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>GWS‑01</td>
+<td>Existing Gmail addresses, aliases, groups, calendars, shared drives, Drive ownership, and sharing relationships must be preserved.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑02</td>
+<td>Google Workspace access must use the approved corporate identity and MFA policy.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑03</td>
+<td>If another identity provider becomes authoritative, Google Workspace must be integrated through supported federation and lifecycle provisioning.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑04</td>
+<td>At least one emergency Google super-administrator method must remain usable if federated sign-in is unavailable.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑05</td>
+<td>Google Drive for desktop, browser access, offline behavior, local caching, shared drives, and user sign-out behavior must be tested on the target endpoint or desktop design.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑06</td>
+<td>SaaS applications must be inventoried with business owner, administrator, user assignment, authentication method, licensing, data classification, and offboarding procedure.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑07</td>
+<td>OAuth application access and third-party integrations must be reviewed; unapproved or excessive permissions must be removed.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑08</td>
+<td>External sharing must be restricted according to business need and reviewed periodically.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑09</td>
+<td>Google Workspace and critical SaaS audit logs must be available to the designated administrator.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>GWS‑10</td>
+<td>SaaS availability, support, data export, and account-recovery dependencies must be documented for critical services.</td>
+<td>Should</td>
+</tr>
+</tbody></table>
+<h2>11. Application requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>APP‑01</td>
+<td>Every locally installed application must be inventoried with name, version, owner, installer, license, data location, update method, and business criticality.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>APP‑02</td>
+<td>Every application must be assessed for dependencies on AD groups, domain computer accounts, LDAP, Kerberos, NTLM, integrated Windows authentication, mapped drives, file shares, or domain service accounts.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>APP‑03</td>
+<td>Applications with an AD dependency must be upgraded, reconfigured, replaced, isolated behind an approved interim service, or declared a blocker to AD retirement.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>APP‑04</td>
+<td>Microsoft Office must remain properly licensed for the selected physical-PC or virtual-desktop model.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>APP‑05</td>
+<td>Office activation, updates, add-ins, templates, macros, file associations, and integration with Google Drive must be tested.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>APP‑06</td>
+<td>Browser bookmarks, approved extensions, certificates, saved business data, and application settings required for work must be migrated or reproducibly configured.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>APP‑07</td>
+<td>Application installers, configuration instructions, license information, and support contacts must be retained in an administrator-accessible repository.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>APP‑08</td>
+<td>Unsupported applications must not be carried forward without a documented exception and risk treatment.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>12. Data, backup, and recovery requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>DAT‑01</td>
+<td>All business data locations must be identified, including server shares, local Desktop/Documents folders, browser downloads, email, Google Drive, removable media, and application-specific data.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑02</td>
+<td>Business data must be stored in an approved company-controlled location rather than only in a local user profile.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑03</td>
+<td>File ownership, permissions, shared-drive membership, external sharing, and retention must be defined before migration.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑04</td>
+<td>Data synchronization must not be treated as backup. A separate recovery method must protect critical Google Workspace, endpoint, and application data.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑05</td>
+<td>Backup scope, frequency, retention, encryption, storage location, and administrative ownership must be documented.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑06</td>
+<td>Required recovery point objective and recovery time objective must be approved for user data and critical business services.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑07</td>
+<td>At least one sample file, user account, and configuration recovery must be tested before AD decommissioning.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑08</td>
+<td>Deleted-user data transfer, retention, and eventual deletion must be included in offboarding.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑09</td>
+<td>Sensitive data must be encrypted in transit and at rest using supported service capabilities.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DAT‑10</td>
+<td>Canadian data-residency or sector-specific privacy requirements must be confirmed before platform selection; they must not be assumed.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>13. Network and office infrastructure requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>NET‑01</td>
+<td>The office must retain a supported business-grade router/firewall with current firmware and protected administrative access.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑02</td>
+<td>The firewall/router or another approved service must provide DHCP if DHCP currently runs on Windows Server.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑03</td>
+<td>AD-integrated DNS must be replaced with a documented DNS design before the domain controller is removed.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑04</td>
+<td>Business and guest Wi-Fi must be separated. Guest devices must not have unrestricted access to corporate endpoints.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑05</td>
+<td>No endpoint or management service may require direct inbound exposure of RDP, SMB, LDAP, or administrative interfaces to the Internet.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑06</td>
+<td>Required cloud-service endpoints must be reachable through documented firewall and DNS rules.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑07</td>
+<td>Internet bandwidth, latency, stability, and data caps must support normal concurrent use of Google Workspace, Office, communications, backup, and the selected desktop architecture.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑08</td>
+<td>A secondary Internet service or cellular failover should be provided if loss of cloud access would stop business operations.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>NET‑09</td>
+<td>Network equipment configuration must be backed up, and administrative credentials must be held in the approved password-management system.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>NET‑10</td>
+<td>If remote work is enabled, access must use the selected cloud service or an approved VPN/zero-trust service rather than exposing office PCs directly.</td>
+<td>Conditional Must</td>
+</tr>
+</tbody></table>
+<h2>14. Security and compliance requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>SEC‑01</td>
+<td>The organization must define a minimum security baseline covering identity, endpoint, SaaS, network, backup, and administrator controls.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑02</td>
+<td>Security policies must be centrally configured and reportable. Manual per-PC configuration alone is insufficient.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑03</td>
+<td>High-risk sign-ins, repeated authentication failures, endpoint malware, disabled protection, encryption failures, and noncompliant devices must generate actionable alerts where supported.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑04</td>
+<td>Corporate secrets, recovery codes, license keys, and administrative credentials must be stored in an approved password or secrets manager.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑05</td>
+<td>Administrator activity and security events must be logged and reviewable.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑06</td>
+<td>Security responsibilities must have named primary and backup owners.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑07</td>
+<td>Cyber-insurance, contractual, privacy, and legal requirements must be collected and mapped to controls before final approval.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑08</td>
+<td>A basic incident-response procedure must define account containment, device isolation, credential reset, evidence preservation, recovery, and notification.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>SEC‑09</td>
+<td>Access, device inventory, external sharing, and administrative roles should be reviewed at least quarterly.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>SEC‑10</td>
+<td>The environment must not depend on security-by-obscurity, shared passwords, unsupported software, or unmonitored administrator accounts.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>15. Operational and support requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>OPS‑01</td>
+<td>Routine user, license, device, policy, application, security, and backup administration must be documented.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OPS‑02</td>
+<td>Onboarding, role change, leave of absence, and offboarding procedures must be documented and tested.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OPS‑03</td>
+<td>A current list of service providers, subscriptions, renewal dates, administrators, support contacts, and billing owners must be maintained.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OPS‑04</td>
+<td>Monitoring must identify inactive accounts, stale devices, failed updates, endpoint threats, backup failures, and cloud-service incidents.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OPS‑05</td>
+<td>A standard device naming, ownership, and assignment convention must be used.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>OPS‑06</td>
+<td>Configuration changes must be recorded with date, operator, purpose, and rollback information.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>OPS‑07</td>
+<td>The organization must retain at least two people or one internal owner plus an external support provider capable of recovering administrative access.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OPS‑08</td>
+<td>Documentation must be sufficient for a qualified replacement administrator to operate the environment without relying on undocumented personal knowledge.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OPS‑09</td>
+<td>Recurring licensing and cloud consumption must be reviewable and accompanied by cost alerts where applicable.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>OPS‑10</td>
+<td>The selected design must remain proportionate to a 10 PC environment and avoid infrastructure that requires continuous specialist administration unless a specific business requirement justifies it.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>16. Discovery requirements before solution approval</h2>
+<p>The following evidence must be collected before any final architecture, cost, or decommissioning date is approved:</p>
+<table><thead><tr>
+<th>ID</th>
+<th>Required discovery evidence</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>DIS‑01</td>
+<td>AD forest/domain name, functional level, domain controllers, users, groups, computers, organizational units, and trusts</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑02</td>
+<td>Complete GPO inventory with settings, links, security filtering, and disposition</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑03</td>
+<td>Windows Server roles and features, including DNS, DHCP, file, print, AD Certificate Services, NPS/RADIUS, VPN, WSUS, and backup</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑04</td>
+<td>File shares, mapped drives, permissions, quotas, login scripts, redirected folders, and data volume</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑05</td>
+<td>Domain service accounts, Windows services, scheduled tasks, scripts, and stored credentials</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑06</td>
+<td>Applications and devices using LDAP, Kerberos, NTLM, integrated authentication, RADIUS, or AD groups</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑07</td>
+<td>PC hardware inventory, TPM status, Secure Boot status, Windows edition/build, Windows 11 compatibility, disk health, and free space</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑08</td>
+<td>User-to-PC assignment, local profiles, local data, printers, scanners, webcams, USB devices, and accessibility requirements</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑09</td>
+<td>Google Workspace edition, users, groups, aliases, shared drives, storage, administrators, OAuth apps, retention, and existing endpoint policies</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑10</td>
+<td>Microsoft 365, Office, Windows, endpoint-security, backup, remote-support, and other SaaS licenses</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑11</td>
+<td>Firewall, router, switches, Wi-Fi, Internet circuit, addressing, DHCP, DNS, VPN, and remote-access configuration</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑12</td>
+<td>Backup configuration, latest successful jobs, retention, offsite copies, and sample restore result</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DIS‑13</td>
+<td>Regulatory, contractual, insurance, data-residency, RTO, RPO, and acceptable-downtime requirements</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>17. Migration requirements</h2>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>MIG‑01</td>
+<td>A pilot must be completed with one representative user and one non-critical PC before broad migration.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑02</td>
+<td>The current domain controller must remain available during the pilot and rollback period.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑03</td>
+<td>A current server backup, endpoint data backup, configuration export, and verified recovery method must exist before each cutover wave.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑04</td>
+<td>The migration procedure must define prechecks, user communication, data copy, profile handling, domain removal, target enrollment, application validation, rollback triggers, and support escalation.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑05</td>
+<td>Existing AD user profiles must be migrated or associated using a tested method. Creating a new cloud identity must not silently abandon local data or application settings.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑06</td>
+<td>Migration should occur in small waves, preferably one or two PCs at a time.</td>
+<td>Should</td>
+</tr>
+<tr>
+<td>MIG‑07</td>
+<td>Each migrated PC must pass the acceptance checklist before the next wave proceeds.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑08</td>
+<td>Domain credentials, cached access, old agents, obsolete certificates, and stale device objects must be removed after acceptance and rollback expiry.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑09</td>
+<td>The project must include user-facing instructions and heightened support during cutover.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>MIG‑10</td>
+<td>A stabilization period must be completed before AD DS decommissioning.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>18. AD decommissioning gate</h2>
+<p>The AD DS server must not be demoted, disconnected, or destroyed until every item below is confirmed:</p>
+<table><thead><tr>
+<th>ID</th>
+<th>Decommissioning condition</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>DEC‑01</td>
+<td>All users can authenticate with the target cloud identity and complete MFA.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑02</td>
+<td>All production PCs are migrated, centrally managed, encrypted, patched, protected, and accepted.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑03</td>
+<td>Required GPO settings have been replaced, made unnecessary, or formally waived.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑04</td>
+<td>DNS and DHCP have been migrated and validated.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑05</td>
+<td>File shares, print queues, scripts, scheduled tasks, services, and profile dependencies have been migrated or retired.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑06</td>
+<td>No required system depends on LDAP, Kerberos, NTLM, RADIUS, AD groups, domain computer accounts, or domain service accounts.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑07</td>
+<td>Certificate-services and certificate-enrollment dependencies have been replaced or proven absent.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑08</td>
+<td>Google Workspace, Microsoft Office, communication tools, SaaS applications, printers, scanners, and peripherals pass acceptance tests.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑09</td>
+<td>Data backup and sample recovery tests have succeeded.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑10</td>
+<td>Onboarding, offboarding, administrator recovery, device replacement, and incident-response procedures have been tested.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑11</td>
+<td>The rollback window and stabilization period have expired without an unresolved critical defect.</td>
+<td>Must</td>
+</tr>
+<tr>
+<td>DEC‑12</td>
+<td>Final approval has been recorded by the business owner and technical owner.</td>
+<td>Must</td>
+</tr>
+</tbody></table>
+<h2>19. Acceptance criteria</h2>
+<p>The selected solution is accepted only when the following measurable outcomes are met:</p>
+<ol>
+<li>All in-scope users can sign in using their assigned corporate identities and required MFA.</li>
+<li>All production PCs appear in the management inventory and report a compliant state.</li>
+<li>Every production PC runs a supported Windows release or has documented temporary commercial ESU coverage and an approved retirement date.</li>
+<li>BitLocker is enabled and a recovery key can be retrieved by an authorized administrator for every capable PC.</li>
+<li>Endpoint security is active, current, centrally visible, and tested with an approved non-malicious validation method.</li>
+<li>Windows update status is centrally reportable and no production PC has an unapproved overdue critical security update.</li>
+<li>Standard users cannot obtain permanent local-administrator privileges.</li>
+<li>Gmail, Drive, Docs, Office, communication tools, printers, scanners, browsers, and required applications pass documented user acceptance tests.</li>
+<li>A replacement-device or rebuild test demonstrates that a representative user can resume work using the documented process.</li>
+<li>A sample business file and one selected configuration or account item can be recovered from backup.</li>
+<li>Disabling a test user prevents further access to the endpoint and business SaaS services within the approved offboarding interval.</li>
+<li>No unresolved AD DS dependency remains in the discovery and decommissioning register.</li>
+<li>The on-premises domain controller can be shut down during a controlled validation period without affecting accepted business functions.</li>
+<li>Operations, recovery, licensing, architecture, inventory, and support documentation have been handed over.</li>
+<li>A representative user can resume approved core work from a replacement device without retrieving data or configuration from the failed PC.</li>
+<li>Company administrators can export current identity, group, device, policy, license, and data inventories using the documented procedures.</li>
+<li>The validated recurring cost remains within the approved operating budget and all consumption-based services have working budget alerts.</li>
+<li>The final design has no undocumented server, account, credential, device, or administrator that constitutes a single point of organizational control.</li>
+<li>If mobility is enabled, a representative remote-access test passes identity, MFA, access-policy, SaaS, communications, performance, token-revocation, and lost-device scenarios.</li>
+<li>Any optional mobility component has a documented business benefit, incremental cost, support owner, and removal path, and does not create an unjustified parallel management platform.</li>
+</ol>
+<h2>20. Candidate optional requirements for reference</h2>
+<p>The following items are not part of the mandatory baseline. Each may be promoted to <code>Should</code>, <code>Conditional Must</code>, or <code>Must</code> only after the business confirms a need, owner, budget, and acceptance test.</p>
+<table><thead><tr>
+<th>ID</th>
+<th>Optional capability</th>
+<th>When it is justified</th>
+<th>Default priority</th>
+</tr></thead><tbody>
+<tr>
+<td>OPT‑01</td>
+<td>Secondary Internet connection or cellular failover</td>
+<td>The business cannot tolerate an office-wide outage for the expected ISP restoration period.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑02</td>
+<td>Managed remote work on corporate devices</td>
+<td>Staff must work regularly from home, client sites, or while travelling.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑03</td>
+<td>Controlled BYOD access</td>
+<td>Corporate devices cannot reasonably be issued and browser/session restrictions can protect company data.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑04</td>
+<td>Cloud desktop or published applications</td>
+<td>A legacy Windows application, sensitive-data boundary, contractor use case, or standardized remote desktop justifies the added cost and administration.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑05</td>
+<td>Dedicated SaaS backup</td>
+<td>Native retention and recovery functions do not satisfy the confirmed recovery-point, recovery-time, legal-retention, or ransomware requirements.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑06</td>
+<td>Passwordless authentication</td>
+<td>Supported devices and applications permit passkeys or security keys and the recovery process is documented.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑07</td>
+<td>Self-service password or account recovery</td>
+<td>It materially reduces support effort without weakening identity verification.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑08</td>
+<td>Automated application deployment and patching</td>
+<td>Manual maintenance creates measurable delay, inconsistency, or security exposure across the PC fleet.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑09</td>
+<td>Centralized remote-support tooling</td>
+<td>External support is frequent enough to justify a managed, logged support channel.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑10</td>
+<td>Formal data-retention and eDiscovery controls</td>
+<td>Legal, contractual, insurance, or regulatory obligations require them.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑11</td>
+<td>Guest or contractor identities</td>
+<td>Non-employees need time-limited access to specific data or applications.</td>
+<td>Could</td>
+</tr>
+<tr>
+<td>OPT‑12</td>
+<td>Enhanced monitoring and security operations service</td>
+<td>The risk profile or cyber-insurance conditions justify continuous monitoring beyond standard platform alerts.</td>
+<td>Could</td>
+</tr>
+</tbody></table>
+<p>Adding every option would be poor design. For this environment, an option should be rejected when it duplicates an existing service, lacks a measurable business benefit, or creates disproportionate recurring cost or specialist workload.</p>
+<h2>21. Open decisions</h2>
+<p>The following decisions are required before converting this draft into an approved requirements baseline:</p>
+<ul>
+<li>Exact number of named users and PCs</li>
+<li>Whether remote work is desired or deferred and, if desired, the approved model</li>
+<li>Whether mobility is required, preferred, or deferred</li>
+<li>Whether remote access is limited to managed corporate devices or permits controlled BYOD</li>
+<li>Approved monthly operating-cost ceiling and three-year total-cost target</li>
+<li>Acceptable routine administration effort for the environment</li>
+<li>Authoritative cloud identity provider</li>
+<li>Required level of Windows management and software deployment</li>
+<li>Windows 11 compatibility and replacement schedule for every PC</li>
+<li>Temporary Windows 10 ESU need and duration</li>
+<li>Existing Google Workspace edition and whether an upgrade is required</li>
+<li>Existing Microsoft Office and Windows licensing</li>
+<li>Required endpoint-security and backup products</li>
+<li>Business-critical applications and any AD dependencies</li>
+<li>Internet failover requirement</li>
+<li>RTO, RPO, acceptable migration downtime, and stabilization period</li>
+<li>Data-residency, privacy, cyber-insurance, and legal-retention obligations</li>
+<li>Internal technical owner and external support arrangement</li>
+</ul>
+<h2>22. References</h2>
+<ul>
+<li><a href="https://support.microsoft.com/en-us/windows/deployment/updates-lifecycle/windows-10-support-has-ended-on-october-14-2025">Microsoft: Windows 10 support ended on October 14, 2025</a></li>
+<li><a href="https://learn.microsoft.com/en-us/windows/whats-new/extended-security-updates">Microsoft: Windows 10 Extended Security Updates for organizations</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join">Microsoft: Microsoft Entra joined devices</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/overview-enhanced-desktop-security-for-windows">Google: Enhanced desktop security for Windows</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/device-requirements-for-google-endpoint-management">Google: Device requirements for Google endpoint management</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/prepare-to-install-gcpw">Google: Prepare to install Google Credential Provider for Windows</a></li>
+</ul>
+
+    </div>
+  </article>
+</main>
+
+  <script src="../../site.js?v=639257110262405759" defer></script>
+</body>
+</html>

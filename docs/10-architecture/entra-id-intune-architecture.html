@@ -1,0 +1,1202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- GENERATED_DOCUMENTATION_SITE -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture and requirements guidance for moving a small-business Windows environment from on-premises Active Directory to cloud-native identity, endpoint, and desktop services.">
+  <meta name="color-scheme" content="light dark">
+  <title>Solution 1 — Microsoft Entra ID + Microsoft Intune · Cloud Migration Demo</title>
+  <link rel="stylesheet" href="../../styles.css?v=639257110262405759">
+</head>
+<body data-index-path="../../index.html">
+  <header class="topbar">
+    <nav class="global-nav" aria-label="Primary">
+      <a href="https://andyxuan.ca/">Home</a>
+      <a href="https://andyxuan.ca/docs/">▤ Library</a>
+      <a href="https://github.com/andyxuan2010/cloud-migration-demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+    <a class="brand" href="../../index.html" aria-label="Documentation home">
+      <span class="brand-mark" aria-hidden="true">CM</span>
+      <span class="brand-text">Cloud Migration Demo <small>CCOE Azure documentation</small></span>
+    </a>
+    <div class="header-tools">
+      <div class="language-switch" aria-label="Language selection">
+        <span class="active" aria-current="true">EN</span>
+        <span aria-disabled="true">FR</span>
+        <span aria-disabled="true">中</span>
+      </div>
+      <button class="icon-button" id="themeButton" type="button" aria-label="Toggle dark mode" title="Toggle color theme">◐</button>
+    </div>
+  </header>
+
+  <main class="reader-view">
+  <div class="reader-navigation">
+    <a class="back-button" href="../../index.html">← All documents</a>
+    <span class="reader-path">docs/10-architecture/entra-id-intune-architecture.md</span>
+  </div>
+  <article class="reader">
+    <div class="reader-tools">
+      <span class="file-label">docs/10-architecture/entra-id-intune-architecture.md</span>
+      <a class="github-link" href="https://github.com/andyxuan2010/cloud-migration-demo/blob/main/docs/10-architecture/entra-id-intune-architecture.md" target="_blank" rel="noopener">View source on GitHub ↗</a>
+    </div>
+    <div class="markdown-body">
+    <h2>Detailed architecture design, analysis, and comparison</h2>
+<p><strong>Design scope:</strong> 6-10 Windows 11 PCs, six initial users, small-business LAN, Google Workspace-centered SaaS, Microsoft Office, and removal of the on-premises Active Directory Domain Services (AD DS) server.</p>
+<p><strong>Document relationship:</strong> This is the detailed design for Solution 1. The authoritative baseline remains <a href="../90-decisions/requirements.html"><code>requirements.md</code></a>. Remote work and user/device portability are optional capabilities; security, recovery, endpoint control, and AD dependency removal remain mandatory.</p>
+<h2>1. Executive decision</h2>
+<p>Microsoft Entra ID + Microsoft Intune is the strongest default architecture for this environment because the core problem is not only user authentication. It also includes Windows sign-in, endpoint configuration, patching, encryption, application deployment, local-administrator control, device inventory, and secure retirement of AD DS.</p>
+<p>The target keeps the physical PCs and local Windows productivity model. It moves identity and endpoint control to Microsoft’s cloud control plane, keeps Google Workspace for Gmail, Drive, Docs, and collaboration, and moves basic DNS/DHCP responsibilities to the existing router or firewall. It does <strong>not</strong> introduce Azure virtual machines, Azure Virtual Desktop, a replacement domain controller, or a new office server.</p>
+<p>The recommended baseline is:</p>
+<ul>
+<li>Microsoft Entra ID as the authoritative workforce identity;</li>
+<li>Microsoft 365 Business Premium with Teams as the baseline user subscription, including Entra ID P1-level controls and Intune Plan 1;</li>
+<li>Windows 11 Pro, Entra joined, Intune enrolled, encrypted, and centrally governed;</li>
+<li>Google Workspace retained as an optional collaboration and mail platform; its license fee is excluded from the baseline cost;</li>
+<li>Entra SAML SSO to Google Workspace, with automated provisioning only if tested and required;</li>
+<li>Google Drive/shared drives for approved business data, with independent backup;</li>
+<li>the office router/firewall providing DHCP and DNS forwarding after AD DS retirement;</li>
+<li>optional remote work or secondary-device portability enabled only through a separate decision.</li>
+</ul>
+<p>Entra ID is not hosted AD DS. It does not provide traditional domain controllers, Group Policy, LDAP, Kerberos, or NTLM in the same way as AD DS. Every remaining dependency on those protocols must be removed, replaced, or explicitly retained before the domain controller is decommissioned.</p>
+<h2>2. Architecture diagram</h2>
+<p><img src="../images/entra_id_intune_target_architecture.png" alt="Microsoft Entra ID and Intune target architecture" loading="lazy"></p>
+<p>The diagram shows the normal control and data paths in blue. The orange dashed path is optional mobility and is not required for acceptance of the baseline design.</p>
+<h2>3. Design principles</h2>
+<h3>3.1 Small-business proportionality</h3>
+<p>The architecture must remain supportable for 6–10 users without a full-time specialist. It should use standard managed services, a small number of policy objects, exception-based monitoring, and documented repeatable procedures.</p>
+<h3>3.2 Local productivity remains the default</h3>
+<p>The PCs remain normal Windows endpoints. Users can run approved Office applications, Chrome, Google Drive for desktop, communication software, and local peripheral workflows. A cloud identity control plane does not require every application to be converted into a browser application.</p>
+<h3>3.3 Cloud control without cloud desktop infrastructure</h3>
+<p>Entra ID and Intune provide identity and endpoint control. They do not require Azure compute, Azure Files, a virtual network, or AVD session hosts. This materially reduces cost, failure modes, and operational workload.</p>
+<h3>3.4 One authoritative identity lifecycle</h3>
+<p>Entra ID should own the workforce user lifecycle for this option. Google Workspace remains a business SaaS platform and can trust Entra through SAML. If automated provisioning is enabled, it must be tested against existing Google accounts, primary email addresses, aliases, groups, shared-drive ownership, and offboarding behavior.</p>
+<h3>3.5 Recovery is mandatory; mobility is optional</h3>
+<p>The business must be able to replace a failed PC, recover data, restore administrative control, and transfer support responsibility. Employees do not need to be permitted to work remotely or use secondary devices unless the business separately approves that capability.</p>
+<h3>3.6 Five-pillar validation using the Azure Well-Architected lens</h3>
+<p>The Azure Well-Architected Framework is used here as a technology-neutral quality lens. Solution 1 does not deploy Azure compute; the same five concerns still apply to Entra ID, Intune, Google Workspace, SaaS dependencies, and local Windows endpoints.</p>
+<table><thead><tr>
+<th>Pillar</th>
+<th>Assessment</th>
+<th>Controls and evidence required before approval</th>
+</tr></thead><tbody>
+<tr>
+<td>Reliability</td>
+<td>Partial; recovery is defined, but service-path continuity must be evidenced</td>
+<td>Set the approved RTO/RPO and an outage matrix for Entra, Google federation, Internet, router/firewall, and individual PCs. Test cached sign-in for previously signed-in users, the direct Google recovery/federation-rollback path, router configuration restore, and replacement-PC recovery. Do not claim full high availability without approved redundant connectivity or equipment.</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Strong baseline; operational response must be demonstrated</td>
+<td>Keep MFA/Conditional Access, separate admin identities, two emergency accounts, BitLocker escrow, Defender/AV, Windows LAPS, standard-user controls, and no Internet-exposed administration. Add evidence for incident triage, lost-device response, token/session revocation, and periodic Entra/Intune/security-log review.</td>
+</tr>
+<tr>
+<td>Cost Optimization</td>
+<td>Partially explicit</td>
+<td>Maintain the licensing, backup, and Azure subscription cost model, an approved monthly ceiling, monthly license/utilization review, and removal of unused or duplicate services. Price optional mobility/BYOD and any Azure resource consumption separately.</td>
+</tr>
+<tr>
+<td>Operational Excellence</td>
+<td>Strong process foundation; ownership and service-health handling must be explicit</td>
+<td>Name a primary and backup operator, retain Pilot/Standard/Exception change records, and maintain runbooks for enrollment, policy rollback, incident escalation, offboarding, restore, and device replacement. Review Microsoft, Google, endpoint, backup, and firewall service health and alerts on the agreed schedule.</td>
+</tr>
+<tr>
+<td>Performance Efficiency</td>
+<td>Missing an explicit measurement baseline</td>
+<td>Measure Windows sign-in, Intune enrollment and policy/application deployment, update completion, Google Workspace/Drive/Office responsiveness, endpoint CPU/memory/disk, and office bandwidth/latency. Review trends for the six-to-ten-PC population and add capacity or simplify policies only when measurements show a need.</td>
+</tr>
+</tbody></table>
+<h2>4. Logical architecture</h2>
+<h3>4.1 Identity and access layer</h3>
+<p><strong>Microsoft Entra ID</strong> is the authoritative identity service.</p>
+<p>Recommended objects and controls:</p>
+<ul>
+<li>one verified corporate domain;</li>
+<li>one named account per employee;</li>
+<li>separate administrator accounts for administrative work;</li>
+<li>at least two emergency administrator accounts protected independently;</li>
+<li>security groups for pilot, standard devices, exceptions, administrators, and application assignments;</li>
+<li>MFA for all users and administrators;</li>
+<li>Conditional Access policies appropriate to the selected license level;</li>
+<li>self-service password reset where recovery controls are acceptable;</li>
+<li>least-privilege Entra roles and Intune roles;</li>
+<li>sign-in and audit-log retention for the approved period;</li>
+<li>documented joiner, mover, leaver, and emergency-access procedures.</li>
+</ul>
+<p>Avoid making a personal account, a single employee, or a single unmanaged recovery method the owner of the tenant, domain, billing relationship, or emergency access.</p>
+<h3>4.2 Windows endpoint layer</h3>
+<p>Each retained PC becomes:</p>
+<ul>
+<li>Windows 11 Pro on supported hardware;</li>
+<li>Microsoft Entra joined, not hybrid joined;</li>
+<li>enrolled in Intune;</li>
+<li>assigned to a device group and compliance policy;</li>
+<li>encrypted with BitLocker, with recovery keys escrowed in an approved administrative system;</li>
+<li>protected by Microsoft Defender or an approved endpoint-security product;</li>
+<li>configured with host firewall, screen lock, update rings, browser security, and standard-user controls;</li>
+<li>administered through controlled elevation rather than permanent local-administrator rights;</li>
+<li>assigned a managed local administrator account with Windows LAPS or an equivalent password-rotation control;</li>
+<li>inventoried with owner, serial number, operating-system version, compliance state, and last-contact information.</li>
+</ul>
+<h3>4.3 Intune management layer</h3>
+<h4>Purpose and problems solved</h4>
+<p>Microsoft Intune is the cloud endpoint-management service for the Windows PCs. It is the device-control plane in this architecture: it enrolls, configures, secures, updates, inventories, and retires endpoints and applications. Intune also reports device compliance to Microsoft Entra ID so that access policies can use the device&#39;s security state. See Microsoft&#39;s <a href="https://learn.microsoft.com/en-us/intune/fundamentals/what-is-intune">Intune overview</a> and <a href="https://learn.microsoft.com/en-us/intune/fundamentals/core-concepts">core concepts</a>.</p>
+<p>The boundary between the two services is deliberate:</p>
+<table><thead><tr>
+<th>Service</th>
+<th>Question it answers</th>
+<th>Responsibilities</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Microsoft Entra ID</strong></td>
+<td>Who is the user, and may they authenticate?</td>
+<td>Users, groups, MFA, Conditional Access, SSO, roles, sign-in logs, and lifecycle status</td>
+</tr>
+<tr>
+<td><strong>Microsoft Intune</strong></td>
+<td>How must the Windows PC be configured, protected, and maintained?</td>
+<td>Enrollment, configuration, applications, updates, security posture, compliance, inventory, and remote device actions</td>
+</tr>
+</tbody></table>
+<p>Intune resolves the main operational gaps created by removing the domain controller:</p>
+<ul>
+<li><strong>GPO loss:</strong> applies required Windows configuration and security outcomes as cloud policies;</li>
+<li><strong>manual PC setup:</strong> standardizes enrollment, configuration, applications, and replacement-device provisioning;</li>
+<li><strong>patch and security drift:</strong> uses update rings, security baselines, and compliance policies;</li>
+<li><strong>uncontrolled software and administration:</strong> deploys approved applications and enforces standard-user and least-privilege controls; and</li>
+<li><strong>limited visibility and recovery:</strong> provides inventory, compliance status, alerts, remote actions, and a repeatable rebuild process.</li>
+</ul>
+<p>For this option, Intune is not a hosted replacement for AD DS. It does not provide DNS, DHCP, LDAP, Kerberos, file shares, print services, certificates, VPN/RADIUS, or application-specific service accounts. Those dependencies still require separate remediation before AD DS decommissioning.</p>
+<p>Intune is effectively mandatory for the full <strong>Entra ID + Intune</strong> target. Entra-only device join would provide cloud identity, but it would not satisfy the architecture&#39;s requirements for centralized Windows configuration, patching, compliance, application deployment, inventory, endpoint recovery, and low-effort remote administration. The six-to-ten-PC deployment should use a deliberately small policy model rather than enterprise-scale policy sprawl.</p>
+<p>Keep the policy model deliberately small:</p>
+<table><thead><tr>
+<th>Policy area</th>
+<th>Baseline design</th>
+</tr></thead><tbody>
+<tr>
+<td>Enrollment</td>
+<td>Automatic enrollment for corporate devices; Autopilot for new or reset devices where practical; provisioning package or documented manual enrollment for existing devices if a wipe is deferred</td>
+</tr>
+<tr>
+<td>Device groups</td>
+<td><code>Pilot</code>, <code>Standard</code>, and <code>Exception</code>; avoid per-user/per-PC policy sprawl</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>Security baseline, screen lock, firewall, browser, Defender/AV, Windows Update, local-admin restrictions, and approved personalization settings</td>
+</tr>
+<tr>
+<td>Compliance</td>
+<td>Windows version, encryption, secure boot/TPM where applicable, antivirus health, firewall, and recent check-in</td>
+</tr>
+<tr>
+<td>Applications</td>
+<td>Required browsers, Office, Google Drive for desktop, communications tools, support agent, and approved line-of-business applications</td>
+</tr>
+<tr>
+<td>Updates</td>
+<td>Pilot ring followed by standard ring; quality and security updates deployed within the documented deadline</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>BitLocker recovery keys, device retire/wipe actions, rebuild documentation, and sample restore testing</td>
+</tr>
+<tr>
+<td>Monitoring</td>
+<td>Actionable alerts for noncompliance, failed enrollment, threats, update failures, and device inactivity</td>
+</tr>
+</tbody></table>
+<p>Do not recreate every historical GPO automatically. Classify each setting as required, useful, obsolete, or unsafe; implement only the required outcome in Intune.</p>
+<h3>4.4 Google Workspace integration</h3>
+<p>Google Workspace remains the platform for:</p>
+<ul>
+<li>Gmail;</li>
+<li>Google Drive and shared drives;</li>
+<li>Google Docs and other Workspace applications;</li>
+<li>Google-based collaboration and communication where used.</li>
+</ul>
+<p>For the Entra-authoritative model:</p>
+<ol>
+<li>Verify the corporate domain in both tenants.</li>
+<li>Configure the Microsoft Entra Google Workspace SAML application.</li>
+<li>Test one non-production or pilot group.</li>
+<li>Confirm the exact Google sign-in URL, domain routing, mobile/browser behavior, recovery flow, and break-glass procedure.</li>
+<li>Add automated provisioning only after confirming attribute mappings, account matching, group behavior, suspension, deletion, and shared-drive ownership.</li>
+<li>Keep at least one documented administrative recovery path that does not depend on a failed federation configuration.</li>
+</ol>
+<p>SAML SSO does not automatically synchronize every user, group, license, or file permission. Those behaviors must be tested and documented.</p>
+<h4>User sign-in and authentication workflow</h4>
+<p><img src="../images/entra_id_google_authentication_workflow.svg" alt="Solution 1 user sign-in and authentication workflow" loading="lazy"></p>
+<p>The workflow has two related but distinct authentication paths:</p>
+<ol>
+<li>The user signs in to the Entra-joined Windows PC with the corporate Entra account. Entra ID validates the identity and applies the configured MFA plus Conditional Access and device-state requirements where the selected license supports them. After successful authentication, Windows creates the user session; previously signed-in users may have limited cached sign-in continuity during a short connectivity outage.</li>
+<li>Intune supplies the device-management and compliance state used by the endpoint and, where configured, by Conditional Access. Intune does not authenticate the Google Workspace user or replace Entra ID as the identity provider.</li>
+<li>When the user opens Google Workspace, Google acts as the SAML service provider. If there is no valid Google session, Google redirects the browser to Entra ID with a SAML authentication request.</li>
+<li>Entra reuses the valid Entra session or performs the required authentication and MFA checks, then returns a signed SAML assertion to Google Workspace through the browser.</li>
+<li>Google verifies the assertion, matches the stable identifier/primary email to the existing Workspace account, creates a Google session, and grants access to Gmail, Drive, Docs, and other approved Workspace services.</li>
+</ol>
+<p>SAML SSO is authentication federation, not directory synchronization. Optional provisioning is a separate Entra-to-Google lifecycle workflow and must be tested for account matching, group behavior, suspension, deletion, aliases, and shared-drive ownership. At least one protected Google super-administrator recovery path must remain usable if Entra federation is unavailable.</p>
+<h3>4.5 Office and other SaaS</h3>
+<p>Microsoft Office licensing must be treated separately from identity design. The business may use existing Office licenses, a Microsoft 365 bundle, or another valid license model. Do not purchase Exchange, OneDrive, SharePoint, or Copilot merely because Intune or Entra is selected unless those services have a confirmed business purpose.</p>
+<p>Every additional SaaS application must be inventoried for:</p>
+<ul>
+<li>authentication method;</li>
+<li>SAML/OIDC support;</li>
+<li>user-provisioning and offboarding behavior;</li>
+<li>local-data location;</li>
+<li>licensing owner;</li>
+<li>backup and retention capability;</li>
+<li>dependence on AD groups, LDAP, Kerberos, NTLM, mapped drives, or service accounts.</li>
+</ul>
+<h3>4.6 Office network layer after AD DS retirement</h3>
+<p>The permanent office network should use the existing business-grade router/firewall for:</p>
+<ul>
+<li>DHCP scopes and reservations;</li>
+<li>DNS forwarding and local name-resolution rules;</li>
+<li>guest Wi-Fi isolation;</li>
+<li>outbound Internet filtering as appropriate;</li>
+<li>VPN or secure remote-support capability if separately approved;</li>
+<li>administrative access control and firmware updates.</li>
+</ul>
+<p>The design must not expose RDP, SMB, LDAP, or administrative services directly to the Internet. If an application still requires domain DNS, DHCP, file shares, certificates, or authentication from the old server, AD DS retirement is blocked until that dependency is resolved.</p>
+<h3>4.7 Data and backup layer</h3>
+<p>Google Drive synchronization is not a complete backup. The design requires:</p>
+<ul>
+<li>clear ownership of shared drives and business data;</li>
+<li>no business-critical data stored only on one PC;</li>
+<li>independent backup for Google Workspace data and any required local endpoint data;</li>
+<li>defined retention, RPO, RTO, and deletion behavior;</li>
+<li>at least one sample restore before cutover and periodic restore testing afterward;</li>
+<li>documented export and vendor-exit procedures;</li>
+<li>protected administrative credentials, recovery keys, and configuration documentation.</li>
+</ul>
+<h3>4.8 Azure subscription and governance layer</h3>
+<p>The approved Solution 1 baseline includes one company-owned Azure subscription associated with the Microsoft Entra tenant. The subscription is a required Azure-side ownership, billing, and governance boundary for the project; it is not a replacement for Entra ID or Intune.</p>
+<p>Required Azure subscription work:</p>
+<ul>
+<li>create or select the subscription under the company billing account and associate it with the production Entra tenant;</li>
+<li>assign separate billing, subscription-owner, contributor, and read-only support roles;</li>
+<li>enable subscription activity logging, budget thresholds, cost alerts, tags, support contacts, and policy controls;</li>
+<li>restrict resource deployment to approved administrators and approved regions;</li>
+<li>document the subscription ID, tenant relationship, billing owner, break-glass procedure, and transfer process; and</li>
+<li>keep Azure compute, Azure Files, AVD, VNets, and other resource consumption out of the baseline unless separately approved and priced.</li>
+</ul>
+<p>The approved baseline user subscription is Microsoft 365 Business Premium with Teams, which includes Entra ID P1-level controls and Intune Plan 1. Standalone Intune Plan 1 with Entra ID Free remains an optional reduced-control profile. The Azure subscription provides the Azure management and billing boundary. Keep the subscriptions associated with the same company-owned Entra tenant and do not create duplicate tenants for the same workforce.</p>
+<h3>4.9 Optional Azure VM jumpbox and Azure Arc add-ons</h3>
+<p>These services are optional add-ons and are not required for the Solution 1 baseline. Each requires a separate purpose, owner, security review, budget, implementation scope, and removal or review date.</p>
+<h4>Optional Azure VM jumpbox or temporary remote server</h4>
+<p>Use a small hardened Azure VM only when a temporary migration server, administrative jumpbox, or controlled remote administration path provides a clear benefit. It is not a general employee remote-work desktop, replacement domain controller, or permanent file server.</p>
+<ul>
+<li>place the VM in a dedicated resource group and private subnet with tags, RBAC, budgets, alerts, patching, backup, and an automatic shutdown schedule;</li>
+<li>provide administration through Azure Bastion or an approved point-to-site VPN with Entra authentication and MFA; when the VM must reach on-premises systems, use an approved site-to-site VPN or other private connection; do not assign a public IP or expose Internet RDP/SSH;</li>
+<li>restrict network egress and administrative roles to the approved migration/support purpose; and</li>
+<li>define an expiry date, remove temporary data, and deallocate or delete the VM and supporting resources when the work is complete.</li>
+</ul>
+<h4>Optional Azure Arc-enabled on-premises hosts</h4>
+<p>Use Azure Arc-enabled servers only when an on-premises host must remain during transition or under an approved exception. Install the Azure Connected Machine agent on each target Windows or Linux server, permit the required outbound connectivity, and manage the resulting Azure resource with separate RBAC, tags, policies, and extension allowlists. Azure Arc does not replace AD DS or make a retired server a cloud service.</p>
+<p>Arc can provide a unified inventory and Azure management view. Azure Monitor, Update Manager, Defender for Cloud, Sentinel, guest configuration, log ingestion, and other management or security services are separate add-ons and may create per-server or consumption charges. Use extra care before connecting Tier 0 hosts such as a domain controller or certificate authority.</p>
+<h3>4.10 Optional business value-adds</h3>
+<p>The following capabilities can improve productivity or reduce support effort, but they are not required to meet the Solution 1 baseline. For a six-user business, select only the capabilities with an identified owner, measurable outcome, approved data boundary, and acceptable recurring cost.</p>
+<h4>Recommended low-cost value-adds</h4>
+<table><thead><tr>
+<th>Capability</th>
+<th>Small-business value</th>
+<th>Planning treatment</th>
+</tr></thead><tbody>
+<tr>
+<td>Windows Autopilot and a standard replacement process</td>
+<td>Reduces hands-on effort when a PC is replaced and provides a repeatable user setup</td>
+<td>Uses the existing Intune/Business Premium platform; allow approximately <strong>4–8 hours</strong> for profile, application, testing, and replacement-runbook work. Autopilot is for organization-owned devices.</td>
+</tr>
+<tr>
+<td>SharePoint/Teams operating hub</td>
+<td>Provides one small, searchable location for policies, procedures, templates, onboarding material, forms, and approved shared documents</td>
+<td>Usually uses services already included in Business Premium; allow <strong>6–12 hours</strong> for information architecture, permissions, versioning, and adoption. Do not create a second authoritative file store without deciding how it relates to Google Drive.</td>
+</tr>
+<tr>
+<td>Power Automate standard workflows</td>
+<td>Automates joiner/leaver checklists, approvals, reminders, backup exceptions, and simple service requests</td>
+<td>Use standard Microsoft 365 connectors first; allow <strong>2–4 hours per lightweight workflow</strong>. Premium/custom connectors, on-premises gateways, RPA, and AI Builder require separate licensing or review.</td>
+</tr>
+<tr>
+<td>Mobile application management (MAM)</td>
+<td>Allows controlled access to approved Microsoft applications from a phone or BYOD device without fully managing the personal device</td>
+<td>Optional remote-work capability using Intune; allow <strong>4–8 hours</strong> for app-protection, Conditional Access, testing, and user guidance.</td>
+</tr>
+</tbody></table>
+<p>Microsoft documents describe Autopilot as a cloud-based device-lifecycle service, provide limited Power Automate rights with Microsoft 365 licenses, and identify Business Premium as an eligible license for Intune enrollment scenarios. See the references in section 15.</p>
+<h4>AI, Copilot, and chatbot options</h4>
+<table><thead><tr>
+<th>Option</th>
+<th>Appropriate use</th>
+<th>Boundary and cost treatment</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Copilot Chat</td>
+<td>Web research, drafting, summarization, and everyday employee assistance</td>
+<td>Eligible Business Premium users can use the web-based Copilot Chat experience without an additional Copilot license. It should not be presented as a full work-grounded assistant for Google Workspace data. Allow <strong>2–4 hours</strong> for enablement, safe-use guidance, and a short pilot.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Copilot pilot</td>
+<td>Meeting, email, document, and Microsoft 365 work-data assistance for one or two high-value users</td>
+<td>Requires a separate per-user Copilot add-on. Review Microsoft 365 permissions and oversharing before enabling work-grounded access; allow <strong>4–8 hours</strong> for the pilot, training, and outcome review. Do not license all six users until measurable value is demonstrated.</td>
+</tr>
+<tr>
+<td>Copilot Studio internal FAQ agent</td>
+<td>Answers recurring IT, HR, operating-procedure, or customer-service questions in Teams or an approved website</td>
+<td>Requires separate agent licensing, Copilot Credits, or usage-based billing depending on the design. Use a curated knowledge source, named content owner, human escalation path, logging, and an accuracy review; allow <strong>8–16 hours</strong> for a small internal agent.</td>
+</tr>
+<tr>
+<td>Custom Azure AI/Azure OpenAI chatbot</td>
+<td>Bespoke customer-facing or line-of-business automation that cannot be handled by Microsoft 365 or Copilot Studio</td>
+<td>Treat as a separate application project with model, hosting, data, security, monitoring, and consumption costs. It is not recommended for the current baseline without a defined revenue or service-desk use case.</td>
+</tr>
+</tbody></table>
+<p>The current architecture remains Google Workspace-centered. Microsoft 365 Copilot work grounding is therefore most valuable only after the business decides which Microsoft 365 content is authoritative. Do not pay for both Microsoft Copilot and another AI service without a specific workflow, data source, owner, and success measure.</p>
+<h4>Targeted security and Azure enhancements</h4>
+<ul>
+<li><strong>Azure Arc plus Update Manager:</strong> worthwhile when an on-premises server remains during transition and the business wants a central patch-compliance view. This extends the existing Arc add-on and can create per-server charges for Arc-connected machines.</li>
+<li><strong>Azure Monitor and Log Analytics:</strong> useful for the optional jumpbox or Arc-connected hosts when actionable health, update, or security alerts are required. Keep collection limited to the required signals because ingestion and retention can create consumption charges.</li>
+<li><strong>Azure Backup:</strong> appropriate for an approved Azure VM or critical retained server; it does not replace the independent Google Workspace and endpoint backup requirement.</li>
+<li><strong>Microsoft Defender Suite for Business Premium:</strong> consider only for an elevated threat, compliance, or incident-response requirement. The baseline already includes Defender for Business, so this is a security step-up rather than a default purchase.</li>
+</ul>
+<h4>Capabilities to defer unless a business case exists</h4>
+<p>Defer Microsoft Sentinel, Azure Firewall, Azure SQL, Azure Functions/App Service, a custom Azure AI application, Entra ID P2/governance features, and Azure Virtual Desktop. These services can be valuable for a larger or regulated environment, but they add cost and operational complexity without a current Solution 1 requirement.</p>
+<h2>5. User and administrator flows</h2>
+<h3>5.1 Normal user sign-in</h3>
+<p>See the detailed <a href="#user-sign-in-and-authentication-workflow">user sign-in and authentication workflow</a> in section 4.4. The operational sequence is:</p>
+<ol>
+<li>User signs in to the Entra-joined Windows 11 PC with the corporate Entra account.</li>
+<li>Entra ID applies the required authentication and MFA, plus Conditional Access and device-state checks where licensed; Intune manages the endpoint and reports compliance.</li>
+<li>User opens Google Workspace. Google redirects to Entra when a Google session is not already present.</li>
+<li>Entra returns a signed SAML assertion, and Google Workspace validates it before creating the Google session.</li>
+<li>User accesses Google Drive, Docs, Office, and approved SaaS according to the assigned groups, licenses, and policies.</li>
+</ol>
+<h3>5.2 New or rebuilt device</h3>
+<ol>
+<li>Confirm the hardware is supported for Windows 11 Pro.</li>
+<li>Register it for Autopilot when appropriate, or use the approved existing-device enrollment method.</li>
+<li>Join the device to Entra ID and enroll it in Intune.</li>
+<li>Apply the pilot or standard device profile.</li>
+<li>Install required applications.</li>
+<li>Verify BitLocker, recovery-key escrow, endpoint protection, local-admin controls, update status, printers, scanners, and Google Drive behavior.</li>
+<li>Sign in as the user and validate application and data access.</li>
+</ol>
+<p>For existing domain PCs, a clean rebuild is often more reliable than trying to convert every old profile in place. If a wipe is not acceptable, a tested profile/data migration method is required; an Entra join does not automatically convert an AD domain profile into an Entra profile.</p>
+<h3>5.3 Administrator flow</h3>
+<ol>
+<li>Administrator uses a separate admin account with MFA.</li>
+<li>Administrative work is performed through Entra, Intune, Google Admin, backup, firewall, and approved support portals.</li>
+<li>Azure subscription administration uses separate subscription RBAC and billing roles; no production Azure resource is deployed without an approved design and cost review.</li>
+<li>Local elevation uses the managed local administrator process, not shared permanent credentials.</li>
+<li>Changes are made first to the pilot group, then to the standard group.</li>
+<li>Sign-in, audit, device, threat, compliance, backup, Azure budget, and subscription alerts are reviewed on the agreed schedule.</li>
+</ol>
+<h3>5.4 Optional remote-work flow</h3>
+<p>This flow is not required for the baseline architecture. If enabled, the user connects from an approved managed device or controlled BYOD path using the same corporate identity, MFA, access policy, logging, and offboarding controls. Direct inbound access to the office LAN is prohibited. Remote performance and lost-device/token-revocation scenarios must be tested before approval.</p>
+<h2>6. Security baseline</h2>
+<table><thead><tr>
+<th>Control</th>
+<th>Required baseline</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr>
+<td>Identity</td>
+<td>Individual accounts, MFA, least privilege, separate admin identities</td>
+<td>Do not use shared interactive accounts</td>
+</tr>
+<tr>
+<td>Emergency access</td>
+<td>Two separately protected emergency accounts</td>
+<td>Test without weakening monitoring</td>
+</tr>
+<tr>
+<td>Conditional Access</td>
+<td>Require MFA and block risky/unapproved access where licensed and appropriate</td>
+<td>Avoid policies that lock out both emergency accounts</td>
+</tr>
+<tr>
+<td>Device join</td>
+<td>Entra join; no hybrid dependency after AD retirement</td>
+<td>Hybrid join is not a substitute for dependency discovery</td>
+</tr>
+<tr>
+<td>Encryption</td>
+<td>BitLocker with escrowed recovery keys</td>
+<td>Verify recovery before production rollout</td>
+</tr>
+<tr>
+<td>Endpoint security</td>
+<td>Defender/AV, host firewall, browser controls, update enforcement</td>
+<td>Use one primary endpoint-security control plane where feasible</td>
+</tr>
+<tr>
+<td>Privilege</td>
+<td>Standard user; controlled elevation; Windows LAPS/equivalent</td>
+<td>No permanent local admin by default</td>
+</tr>
+<tr>
+<td>Updates</td>
+<td>Pilot and standard rings with deadlines and exception reporting</td>
+<td>Do not leave Windows 10 unsupported without an approved temporary plan</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>Shared-drive ownership, independent backup, restore testing</td>
+<td>Synchronization alone is not backup</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>Firewall, guest isolation, outbound-only cloud access, no Internet RDP</td>
+<td>Local peripherals remain a discovery and pilot item</td>
+</tr>
+<tr>
+<td>Logging</td>
+<td>Entra, Intune, endpoint-security, backup, and firewall logs</td>
+<td>Use exception-based review appropriate to the business size</td>
+</tr>
+<tr>
+<td>Azure subscription</td>
+<td>Company-owned subscription, subscription-level RBAC, budget alerts, policy, and activity logging</td>
+<td>No unapproved Azure resource deployment or personal-account ownership</td>
+</tr>
+</tbody></table>
+<h2>7. AD DS dependency-removal gate</h2>
+<p>The domain controller must not be demoted until the following are evidenced:</p>
+<ul>
+<li>no required application uses LDAP, Kerberos, NTLM, domain service accounts, or AD security groups;</li>
+<li>DNS is served or forwarded by the router/firewall or another approved design;</li>
+<li>DHCP has been moved and reservations tested;</li>
+<li>file shares and mapped drives have been migrated or formally retired;</li>
+<li>printers and scanners work without domain-dependent queues or credentials;</li>
+<li>certificate services and auto-enrollment dependencies are removed or replaced;</li>
+<li>VPN, RADIUS/NPS, scripts, scheduled tasks, Windows services, backup agents, and management tools no longer depend on AD DS;</li>
+<li>all users can sign in to Entra-joined PCs;</li>
+<li>Google Workspace, Office, communications, peripherals, and critical SaaS pass acceptance testing;</li>
+<li>backup and sample restore have passed;</li>
+<li>rollback and stabilization windows are documented and have not expired with critical defects;</li>
+<li>the former server is backed up and the approved retention period is defined.</li>
+</ul>
+<h2>8. Migration implementation plan</h2>
+<h3>Time estimate</h3>
+<p>The following is a planning estimate for six initial users and up to 10 Windows PCs. <strong>Effort</strong> is hands-on implementation labor; <strong>elapsed time</strong> includes user acceptance, vendor/licensing decisions, migration batches, change windows, and the stabilization observation period. The clean-environment total is <strong>36–54 hours</strong> after adding the baseline Microsoft 365 Business Premium with Teams subscription and Azure subscription foundation. Profile migration, legacy applications, complex GPO translation, or unresolved AD-hosted services can increase the effort to approximately <strong>52–72 hours</strong>.</p>
+<table><thead><tr>
+<th>Phase</th>
+<th>Effort</th>
+<th>Indicative elapsed time</th>
+</tr></thead><tbody>
+<tr>
+<td>Phase 0 — Discovery and design confirmation</td>
+<td>5–7 hours</td>
+<td>2–5 business days</td>
+</tr>
+<tr>
+<td>Phase 1 — Tenant and Azure subscription foundation</td>
+<td>5–7 hours</td>
+<td>3–7 business days</td>
+</tr>
+<tr>
+<td>Phase 2 — Intune baseline</td>
+<td>9–12 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 3 — Google Workspace integration</td>
+<td>4–6 hours</td>
+<td>3–7 business days</td>
+</tr>
+<tr>
+<td>Phase 4 — Pilot migration</td>
+<td>5–7 hours</td>
+<td>3–5 business days</td>
+</tr>
+<tr>
+<td>Phase 5 — Production migration</td>
+<td>4–6 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td>Phase 6 — Network and service migration</td>
+<td>3–5 hours</td>
+<td>3–5 business days</td>
+</tr>
+<tr>
+<td>Phase 7 — Stabilization and AD DS decommissioning</td>
+<td>1–4 hours</td>
+<td>1–2 weeks</td>
+</tr>
+<tr>
+<td><strong>Total implementation effort</strong></td>
+<td><strong>36–54 hours</strong></td>
+<td><strong>Approximately 6–10 weeks</strong></td>
+</tr>
+</tbody></table>
+<p>The elapsed range assumes one implementation owner working part time and does not include hardware procurement, licensing-approval delays, major application redevelopment, or ongoing managed support. Tenant creation, Business Premium licensing, Azure subscription provisioning, and billing verification are included in Phases 0–1; Microsoft or reseller approval delays remain calendar dependencies.</p>
+<p>See the separate <a href="../30-deployment/solution-1-implementation-action-plan.html">Solution 1 detailed implementation action plan</a> for the task-level checklist, owners, dependencies, evidence, effort estimates, go/no-go gates, rollback controls, and handover requirements.</p>
+<h3>Phase 0 — Discovery and design confirmation</h3>
+<p><strong>Activities</strong></p>
+<ul>
+<li>inventory AD users, groups, computers, GPOs, DNS, DHCP, file, print, certificate, VPN, RADIUS, scripts, scheduled tasks, and service accounts;</li>
+<li>inventory every PC, Windows edition/build, TPM/Secure Boot state, disk space, local data, applications, and peripherals;</li>
+<li>inventory Google Workspace, Office, endpoint-security, backup, and Internet entitlements;</li>
+<li>classify each GPO and application dependency;</li>
+<li>confirm the number of users/devices, data ownership, RPO/RTO, licensing ceiling, and optional mobility decision;</li>
+<li>confirm the Microsoft 365 Business Premium with Teams baseline, or document the optional Entra ID Free + standalone Intune Plan 1 reduced-control profile, together with the Azure subscription owner, billing account, subscription purpose, and monthly Azure consumption ceiling.</li>
+</ul>
+<p><strong>Exit criteria:</strong> no unknown AD-hosted service or business-critical application dependency remains in the discovery register.</p>
+<h3>Phase 1 — Tenant and Azure subscription foundation</h3>
+<ul>
+<li>create or reuse the single Microsoft Entra workforce tenant through the approved Microsoft cloud subscription;</li>
+<li>purchase and assign six Microsoft 365 Business Premium with Teams licenses as the baseline; do not add standalone Intune Plan 1 or Entra ID P1 licenses;</li>
+<li>create or associate one company-owned Azure subscription with the Entra tenant;</li>
+<li>assign separate subscription owner, billing, contributor, and read-only support roles; do not use a personal account;</li>
+<li>configure Azure subscription budgets, cost alerts, tags, policy, support contacts, and a rule preventing unapproved resource deployment;</li>
+<li>verify the corporate domain in Entra ID and Google Workspace;</li>
+<li>establish named administrative and emergency accounts;</li>
+<li>implement and test the approved Conditional Access policies; if the reduced-control Entra ID Free alternative is approved, use security defaults and record the missing Conditional Access/device-compliance gates;</li>
+<li>configure Entra groups, roles, audit settings, and recovery methods;</li>
+<li>confirm license assignment and avoid purchasing duplicate standalone Entra ID P1 or Intune Plan 1 licenses when Business Premium already includes them;</li>
+<li>document tenant ownership, Azure subscription ownership, billing ownership, and support contacts.</li>
+</ul>
+<h3>Phase 2 — Intune baseline</h3>
+<ul>
+<li>configure MDM authority and enrollment restrictions;</li>
+<li>create Pilot, Standard, and Exception groups;</li>
+<li>configure security, compliance, update, encryption, local-admin, browser, and application policies;</li>
+<li>configure BitLocker recovery-key escrow and Windows LAPS/equivalent;</li>
+<li>package or document the required applications;</li>
+<li>configure alerts and device inventory;</li>
+<li>test a clean Windows 11 device before touching production PCs.</li>
+</ul>
+<h3>Phase 3 — Google Workspace integration</h3>
+<ul>
+<li>configure and test Entra SAML SSO;</li>
+<li>verify user matching and Google account ownership;</li>
+<li>test Drive, Docs, shared drives, Gmail, browser sessions, and recovery;</li>
+<li>enable automated provisioning only if the selected Google edition and mappings support the required lifecycle;</li>
+<li>document the federation failure and emergency recovery procedures.</li>
+</ul>
+<h3>Phase 4 — Pilot migration</h3>
+<ul>
+<li>select one user and one non-critical PC;</li>
+<li>back up the PC and verify the restore path;</li>
+<li>migrate or rebuild the Windows profile using the approved method;</li>
+<li>Entra join and Intune-enroll the PC;</li>
+<li>validate sign-in, MFA, applications, Drive, Office, printing, scanning, communications, BitLocker, LAPS, updates, and support;</li>
+<li>keep the domain controller available for rollback.</li>
+</ul>
+<h3>Phase 5 — Production migration</h3>
+<ul>
+<li>migrate one or two PCs per batch;</li>
+<li>use the pilot results to correct policies and application packaging;</li>
+<li>confirm each device is compliant and recoverable before moving to the next batch;</li>
+<li>maintain a migration ledger with user, device, date, profile/data method, application status, and acceptance result.</li>
+</ul>
+<h3>Phase 6 — Network and service migration</h3>
+<ul>
+<li>move DHCP and DNS responsibilities to the router/firewall or approved managed service;</li>
+<li>migrate or retire file shares, print queues, certificates, VPN/RADIUS, scripts, scheduled tasks, and service accounts;</li>
+<li>test name resolution, printers, scanners, and business applications from every production PC;</li>
+<li>retain the domain controller until the dependency-removal gate is complete.</li>
+</ul>
+<h3>Phase 7 — Stabilization and AD DS decommissioning</h3>
+<ul>
+<li>observe the environment for the approved stabilization period;</li>
+<li>review sign-in, endpoint, backup, application, and network alerts;</li>
+<li>execute a controlled domain-controller shutdown test;</li>
+<li>if no critical dependency appears, demote and remove AD DS;</li>
+<li>retain the approved backup and update the final operating documentation.</li>
+</ul>
+<h3>Optional add-on work packages</h3>
+<p>The following work is excluded from the <strong>36–54 hour</strong> baseline implementation estimate and is performed only after separate approval:</p>
+<ul>
+<li><strong>Azure VM jumpbox/temporary remote server:</strong> define the use and expiry date, create the private network placement, configure Bastion or point-to-site VPN, apply Entra/MFA/RBAC/hardening/logging/budget controls, validate the migration or administration workflow, and deallocate or delete the resources at closure; plan approximately <strong>6–12 additional hours</strong>.</li>
+<li><strong>Azure Arc-enabled on-premises hosts:</strong> inventory target hosts, verify support and outbound connectivity, install and register the Connected Machine agent, apply resource organization/RBAC/policy controls, enable only approved management extensions, test monitoring/update/support actions, and document offboarding; plan approximately <strong>4–8 additional hours</strong> for one to three simple hosts.</li>
+<li><strong>Windows Autopilot and device-replacement process:</strong> register organization-owned devices, create the deployment profile, validate applications and policies, test replacement, and document the user and administrator runbooks; plan approximately <strong>4–8 additional hours</strong>.</li>
+<li><strong>SharePoint/Teams operating hub:</strong> design the site, document libraries, permissions, versioning, navigation, forms, and owner handover; plan approximately <strong>6–12 additional hours</strong>.</li>
+<li><strong>Power Automate standard workflow:</strong> design, build, secure, test, and document one lightweight workflow using standard connectors; plan approximately <strong>2–4 additional hours per workflow</strong>.</li>
+<li><strong>Copilot Chat enablement:</strong> configure access, review Microsoft 365 sharing and privacy settings, publish safe-use guidance, and run a short pilot; plan approximately <strong>2–4 additional hours</strong>.</li>
+<li><strong>Microsoft 365 Copilot pilot:</strong> assign the separate add-on to one or two users, validate data permissions, provide training, and measure outcomes; plan approximately <strong>4–8 additional hours</strong>, excluding license fees.</li>
+<li><strong>Copilot Studio internal FAQ agent:</strong> curate source material, build the agent, configure authentication and escalation, test answers, and document ownership; plan approximately <strong>8–16 additional hours</strong>, excluding agent usage or license fees.</li>
+<li><strong>Mobile application management:</strong> configure app-protection and access policies, test approved devices, and document privacy and wipe behavior; plan approximately <strong>4–8 additional hours</strong>.</li>
+</ul>
+<p>Complex firewall/proxy rules, multiple hosts, Tier 0 servers, private connectivity, Defender/Sentinel integration, or incident remediation can increase these ranges.</p>
+<h3>Implementation deliverables and completed end state</h3>
+<p>After the migration plan and stabilization period are complete, the project will deliver the following:</p>
+<table><thead><tr>
+<th>Deliverable</th>
+<th>Completed outcome</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft cloud foundation</td>
+<td>One company-owned Microsoft Entra tenant, verified corporate domain, Azure subscription association, documented ownership, billing, RBAC, budgets, alerts, policies, and recovery contacts</td>
+</tr>
+<tr>
+<td>Licensed user platform</td>
+<td>Six Microsoft 365 Business Premium with Teams licenses assigned as the baseline, including Entra ID P1-level controls, Intune Plan 1, Office, Defender, Purview, Exchange, OneDrive, SharePoint, and Teams</td>
+</tr>
+<tr>
+<td>Identity and access</td>
+<td>Entra user/group lifecycle, administrator and emergency accounts, MFA, Conditional Access, Google SAML SSO, and tested offboarding/recovery procedures</td>
+</tr>
+<tr>
+<td>Managed Windows estate</td>
+<td>Up to 10 supported Windows 11 Pro PCs Entra joined, Intune enrolled, encrypted with BitLocker, protected, patched, inventoried, configured as standard-user devices, and governed by approved policies</td>
+</tr>
+<tr>
+<td>Applications and peripherals</td>
+<td>Approved Office, Google Workspace, browser, communication, printing, scanning, and other business workflows tested and documented</td>
+</tr>
+<tr>
+<td>Data protection</td>
+<td>Google Workspace and required endpoint data independently backed up, with retention, RPO/RTO, restore evidence, and vendor-exit procedures documented</td>
+</tr>
+<tr>
+<td>AD DS retirement</td>
+<td>DHCP/DNS and other required services transferred or replaced; file, print, certificate, VPN/RADIUS, script, scheduled-task, and service-account dependencies remediated or formally waived; domain controller demoted and retired</td>
+</tr>
+<tr>
+<td>Optional Azure add-ons, if approved</td>
+<td>Hardened private jumpbox/temporary VM and/or Arc-enabled on-premises host inventory with documented purpose, owner, expiry, RBAC, budget, monitoring, and removal evidence</td>
+</tr>
+<tr>
+<td>Optional business value-adds, if approved</td>
+<td>Autopilot replacement profile and runbook, SharePoint/Teams operating hub, approved workflow register, Copilot/AI usage guidance or pilot evidence, FAQ-agent ownership, and/or MAM profile with acceptance evidence</td>
+</tr>
+<tr>
+<td>Handover package</td>
+<td>Final architecture diagram, configuration and policy register, device/user migration ledger, dependency-removal evidence, operating runbooks, support contacts, cost/license register, rollback record, and business acceptance sign-off</td>
+</tr>
+</tbody></table>
+<p>The resulting operating model is local Windows productivity with centralized cloud identity and endpoint control. Users can sign in to managed PCs with Entra ID, access Google Workspace through the approved federation, and receive replacement-device and recovery support without depending on the retired domain controller. Remote work remains disabled unless separately approved and tested.</p>
+<h2>9. Operating model</h2>
+<h3>Routine operations</h3>
+<ul>
+<li>review actionable identity, device, security, and backup alerts;</li>
+<li>approve or remediate noncompliant devices;</li>
+<li>review update failures and stale check-ins;</li>
+<li>process joiners, movers, and leavers through documented checklists;</li>
+<li>review license assignments and recurring costs monthly;</li>
+<li>review Azure subscription ownership, RBAC, budgets, alerts, activity logs, and any resource consumption monthly;</li>
+<li>test a restore periodically;</li>
+<li>review emergency-account access and recovery information.</li>
+</ul>
+<h3>Change management</h3>
+<ul>
+<li>pilot all policy and application changes;</li>
+<li>use a small number of standard groups;</li>
+<li>record the change, owner, rollback action, and expected user impact;</li>
+<li>avoid unsupported preview features as production dependencies;</li>
+<li>remove obsolete policies and licenses rather than allowing configuration drift.</li>
+</ul>
+<h3>Support model</h3>
+<p>The target should be supportable by a qualified external administrator or internal part-time owner. Remote administration is required for operational efficiency, but employee remote work remains optional. Direct exposure of administrative services to the Internet is prohibited.</p>
+<h2>10. Licensing and cost model</h2>
+<p>Solution 1 uses Microsoft 365 Business Premium with Teams as the baseline user subscription, together with one company-owned Azure subscription associated with the Microsoft Entra tenant. Business Premium includes Entra ID P1-level controls, Intune Plan 1, Office, and Defender for Business. Standalone Entra ID Free + Intune Plan 1 remains an optional reduced-control profile.</p>
+<h3>Baseline and optional subscription profile</h3>
+<p>Prices below are Canadian list-price planning assumptions checked on <strong>2026-09-04</strong>, before applicable tax. Confirm the final quote, currency, billing term, and existing entitlements before purchase.</p>
+<p>The cost table uses Microsoft 365 Business Premium with Teams as the baseline. Google Workspace is optional and its license fee is excluded as <strong>CAD 0 incremental cost</strong>; only the independent backup allowance is included.</p>
+<table><thead><tr>
+<th>Baseline or optional item</th>
+<th>Current planning price</th>
+<th>Six-user planning cost</th>
+<th>Scope and notes</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Business Premium with Teams <em>(baseline)</em></td>
+<td><strong>CAD 29.80/user/month</strong>, annual commitment</td>
+<td><strong>CAD 178.80/month</strong> or <strong>CAD 2,145.60/year</strong></td>
+<td>Baseline bundle; includes Entra ID P1-level controls, Intune Plan 1, Office, and Defender for Business. Copilot is excluded.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Business Premium without Teams <em>(optional)</em></td>
+<td><strong>CAD 25.50/user/month</strong>, annual commitment</td>
+<td><strong>CAD 153.00/month</strong> or <strong>CAD 1,836.00/year</strong></td>
+<td>Optional lower-cost bundle when Teams is not required.</td>
+</tr>
+<tr>
+<td>Microsoft Entra ID Free <em>(optional alternative)</em></td>
+<td><strong>CAD 0/user/month</strong></td>
+<td><strong>CAD 0/month</strong></td>
+<td>Reduced-control directory profile; security defaults MFA and basic identity only.</td>
+</tr>
+<tr>
+<td>Microsoft Intune Plan 1 <em>(optional alternative)</em></td>
+<td><strong>CAD 10.90/user/month</strong>, annual commitment</td>
+<td><strong>CAD 65.40/month</strong> or <strong>CAD 784.80/year</strong></td>
+<td>Used with Entra ID Free when Business Premium is not selected; do not add it to Business Premium.</td>
+</tr>
+<tr>
+<td>Optional Google Workspace Business Plus</td>
+<td><strong>Optional; price excluded</strong></td>
+<td><strong>CAD 0 included cost</strong></td>
+<td>Available for Gmail, Drive, Docs, shared drives, and collaboration; Google Workspace licensing is not included in this estimate.</td>
+</tr>
+<tr>
+<td>Azure subscription</td>
+<td><strong>No fixed subscription fee in this baseline; pay-as-you-go for Azure resources</strong></td>
+<td><strong>CAD 0 fixed</strong></td>
+<td>Required company-owned Azure management/billing boundary. Azure compute, storage, networking, monitoring, and other consumption are excluded until separately approved.</td>
+</tr>
+<tr>
+<td>Independent SaaS/endpoint backup</td>
+<td><strong>CAD 50–100/month planning allowance</strong></td>
+<td><strong>CAD 50–100/month</strong></td>
+<td>Separate backup service; the optional Google Workspace license is excluded. Synchronization is not backup.</td>
+</tr>
+</tbody></table>
+<h3>Microsoft 365 Business Premium included services</h3>
+<p>In addition to Entra ID P1-level controls and Intune Plan 1, the baseline Microsoft 365 Business Premium with Teams license includes:</p>
+<table><thead><tr>
+<th>Area</th>
+<th>Included services and value</th>
+</tr></thead><tbody>
+<tr>
+<td>Office productivity</td>
+<td>Desktop, web, and mobile Word, Excel, PowerPoint, Outlook, and OneNote</td>
+</tr>
+<tr>
+<td>Business email</td>
+<td>Exchange Online email and calendar with custom-domain support</td>
+</tr>
+<tr>
+<td>Collaboration</td>
+<td>Microsoft Teams chat, calling, meetings, collaboration, and webinars; SharePoint team sites and coauthoring</td>
+</tr>
+<tr>
+<td>Cloud storage</td>
+<td>1 TB OneDrive storage per user</td>
+</tr>
+<tr>
+<td>Endpoint security</td>
+<td>Microsoft Defender for Business for malware, ransomware, and device protection</td>
+</tr>
+<tr>
+<td>Email security</td>
+<td>Microsoft Defender for Office 365 Plan 1 for phishing and collaboration threats</td>
+</tr>
+<tr>
+<td>Data protection</td>
+<td>Microsoft Purview Information Protection and applicable data-loss-prevention capabilities</td>
+</tr>
+<tr>
+<td>Additional applications</td>
+<td>Loop, Clipchamp, Bookings, Planner, Forms, Lists, To Do, and related Microsoft 365 services</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>Windows 11 Pro upgrade rights, subject to qualifying-device requirements</td>
+</tr>
+</tbody></table>
+<p>Copilot, Teams Phone/PSTN calling, Entra ID P2 features, Intune Plan 2/Suite, Azure resource consumption, Google Workspace, and independent backup are not included in this baseline license price.</p>
+<h3>Licensing model notes</h3>
+<ul>
+<li><strong>Entra ID Free:</strong> remains an optional reduced-control profile. It provides the basic directory, security-defaults MFA, static groups, and basic device identity, but lacks custom Conditional Access and device-compliance gates, some automatic Intune-enrollment paths, cloud self-service password reset/writeback, dynamic groups, and advanced risk/governance controls.</li>
+<li><strong>Intune Plan 1:</strong> is included in the baseline through Business Premium. If Business Premium is not selected, standalone Intune Plan 1 costs <strong>CAD 10.90/user/month</strong> with annual billing. Plan 2 (<strong>CAD 5.40/user/month</strong>) and Intune Suite (<strong>CAD 13.60/user/month</strong>) are optional add-ons and are not included in the baseline estimate.</li>
+<li><strong>Business Premium:</strong> is the baseline bundle, not an additive charge to standalone Intune Plan 1 or Entra ID P1. It includes the Office, endpoint-security, email, storage, and collaboration services required by the baseline.</li>
+</ul>
+<p>If full Conditional Access is required without Business Premium, add standalone Microsoft Entra ID P1 (<strong>CAD 9.50/user/month</strong>) to Intune Plan 1 (<strong>CAD 10.90/user/month</strong>), approximately <strong>CAD 20.40/user/month</strong> before separately licensed Office, endpoint security, and other services. This is an exception profile, not the baseline.</p>
+<h3>Recurring license and platform estimate</h3>
+<p>The six-user monthly baseline estimate breaks down as follows. The Azure subscription has no fixed license fee and no Azure resource consumption is included in this baseline.</p>
+<table><thead><tr>
+<th>Component</th>
+<th>Baseline: Business Premium with Teams</th>
+<th>Optional Business Premium without Teams</th>
+<th>Reduced-control alternative: Entra Free + Intune Plan 1</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Business Premium, 6 users</td>
+<td><strong>CAD 178.80/month</strong></td>
+<td><strong>CAD 153.00/month</strong></td>
+<td>Not selected</td>
+</tr>
+<tr>
+<td>Microsoft Entra ID</td>
+<td>Included</td>
+<td>Included</td>
+<td><strong>CAD 0/month</strong></td>
+</tr>
+<tr>
+<td>Microsoft Intune Plan 1, 6 users</td>
+<td>Included</td>
+<td>Included</td>
+<td><strong>CAD 65.40/month</strong></td>
+</tr>
+<tr>
+<td>Optional Google Workspace license</td>
+<td><strong>CAD 0 included cost</strong></td>
+<td><strong>CAD 0 included cost</strong></td>
+<td>Optional service; license fee excluded from the baseline calculation.</td>
+</tr>
+<tr>
+<td>Independent SaaS/endpoint backup</td>
+<td><strong>CAD 50–100/month</strong></td>
+<td><strong>CAD 50–100/month</strong></td>
+<td><strong>CAD 50–100/month</strong></td>
+</tr>
+<tr>
+<td>Azure subscription fixed fee</td>
+<td><strong>CAD 0/month</strong></td>
+<td><strong>CAD 0/month</strong></td>
+<td><strong>CAD 0/month</strong></td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>CAD 228.80–278.80/month</strong></td>
+<td><strong>CAD 203.00–253.00/month</strong></td>
+<td><strong>CAD 115.40–165.40/month</strong></td>
+</tr>
+</tbody></table>
+<p>Therefore, the baseline license/platform cost is <strong>CAD 228.80–278.80/month</strong> (<strong>CAD 2,745.60–3,345.60/year</strong>), consisting of Business Premium with Teams plus backup. Google Workspace is optional and excluded from the calculation. The no-Teams alternative is <strong>CAD 203.00–253.00/month</strong>; the Entra Free + Intune Plan 1 alternative is <strong>CAD 115.40–165.40/month</strong>, before separately licensed Office and endpoint security.</p>
+<p>The Azure subscription itself is not a monthly license line, but any deployed Azure resource creates consumption charges. If Azure Monitor, Log Analytics, Key Vault, Automation, storage, networking, or another Azure service is added, establish a separate resource-level estimate using the Azure Pricing Calculator and the subscription budget before deployment.</p>
+<h3>Optional Azure add-on cost treatment</h3>
+<table><thead><tr>
+<th>Optional add-on</th>
+<th>Cost treatment and planning rule</th>
+</tr></thead><tbody>
+<tr>
+<td>Azure VM jumpbox or temporary remote server</td>
+<td>No fixed license line. Add VM compute, OS/data disks, network, Bastion or VPN, backup, monitoring, and log-ingestion consumption. Use an automatic shutdown schedule and remove the resources when the approved temporary purpose ends.</td>
+</tr>
+<tr>
+<td>Azure Arc-enabled on-premises hosts</td>
+<td>Basic Arc server connection and Azure resource organization are generally offered at no additional charge; Update Manager, guest configuration, Monitor, Defender for Cloud, Sentinel, Windows Server pay-as-you-go, log ingestion, storage, and other services can add per-server or consumption charges. Price only the approved services.</td>
+</tr>
+</tbody></table>
+<p>These add-ons are excluded from the baseline <strong>CAD 228.80–278.80/month</strong> license/platform estimate and from the baseline implementation effort. If either is approved, add its resource/service estimate, security controls, owner, support procedure, and exit criteria before deployment.</p>
+<h3>Optional business value-add cost treatment</h3>
+<table><thead><tr>
+<th>Optional capability</th>
+<th>Cost treatment and planning rule</th>
+</tr></thead><tbody>
+<tr>
+<td>Windows Autopilot and replacement process</td>
+<td>No separate Autopilot license is added to this estimate; include implementation labor and any OEM/reseller service.</td>
+</tr>
+<tr>
+<td>SharePoint/Teams operating hub</td>
+<td>Uses the baseline Microsoft 365 services where the selected design and storage remain within the subscription entitlement; include migration, information architecture, backup, and support labor separately.</td>
+</tr>
+<tr>
+<td>Power Automate standard workflows</td>
+<td>Limited standard-connector rights may be available through Microsoft 365. Premium/custom connectors, on-premises gateways, RPA, AI Builder, and higher-volume scenarios require separate licensing or consumption review.</td>
+</tr>
+<tr>
+<td>Mobile application management</td>
+<td>Treat as an Intune configuration add-on when supported by the selected apps and devices; include policy, testing, privacy, and support labor.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Copilot Chat</td>
+<td>Web-based Copilot Chat is available without an additional Copilot license for eligible Business Premium users; include enablement and training labor.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Copilot pilot</td>
+<td>Add a separate per-user Copilot license only for approved pilot users; exclude its price from the baseline until the tenant region, term, and reseller price are confirmed.</td>
+</tr>
+<tr>
+<td>Copilot Studio internal FAQ agent</td>
+<td>Add the applicable Copilot Studio license, Copilot Credits, or usage-based consumption, plus agent maintenance and content-owner time.</td>
+</tr>
+<tr>
+<td>Custom Azure AI/Azure OpenAI chatbot</td>
+<td>Separate application estimate for model usage, hosting, data, security, monitoring, and ongoing support; excluded from Solution 1.</td>
+</tr>
+<tr>
+<td>Azure Monitor/Log Analytics</td>
+<td>Add workspace, ingestion, retention, alerting, and any connected-resource charges only for approved VMs or Arc hosts.</td>
+</tr>
+<tr>
+<td>Microsoft Defender Suite for Business Premium</td>
+<td>Optional security add-on; do not add it to the baseline because Business Premium already includes Defender for Business.</td>
+</tr>
+</tbody></table>
+<p>All optional value-adds are excluded from the baseline <strong>CAD 228.80–278.80/month</strong> license/platform estimate. Approve each with an owner, target outcome, implementation estimate, recurring-cost ceiling, data boundary, and rollback or retirement criterion.</p>
+<h3>Build and implementation cost</h3>
+<p>For the baseline tenant, Microsoft 365 Business Premium with Teams, Azure subscription, endpoint, Google federation, migration, testing, and documentation work:</p>
+<ul>
+<li><strong>36–54 hours</strong> for a clean six-user/up-to-10-PC implementation at <strong>CAD 125–150/hour</strong>: <strong>CAD 4,500–8,100</strong>;</li>
+<li><strong>52–72 hours</strong> when profile migration, legacy applications, complex GPO translation, Google account matching, Azure governance exceptions, or AD-hosted services require remediation: <strong>CAD 6,500–10,800</strong>.</li>
+</ul>
+<p>These ranges exclude hardware procurement, major application redevelopment, formal compliance work, incident response, and ongoing managed support.</p>
+<h3>Maintenance cost</h3>
+<p>Budget <strong>3–5 hours/month</strong> at <strong>CAD 125–150/hour</strong>, or approximately <strong>CAD 375–750/month</strong> (<strong>CAD 4,500–9,000/year</strong>). This includes Entra and Intune policy review, Azure subscription/RBAC/budget review, license and cost review, device compliance and update exceptions, joiner/mover/leaver administration, backup checks, restore testing, alert review, and recovery documentation. If Azure resources are deployed or the environment requires frequent application packaging and incident support, budget <strong>5–8 hours/month</strong> or <strong>CAD 625–1,200/month</strong> instead.</p>
+<p>Optional value-adds are excluded from these maintenance ranges. For one to three lightweight capabilities such as a SharePoint hub, standard workflows, MAM, or a Copilot pilot, allow approximately <strong>1–3 additional hours/month</strong> for ownership, content, exception, and usage review. Copilot Studio agents, extensive automation, or Azure telemetry may require a separate support allowance.</p>
+<h3>Main cost drivers</h3>
+<ul>
+<li>Microsoft 365 Business Premium with Teams as the baseline user subscription;</li>
+<li>optional Google Workspace administration and any provisioning/management upgrade; its license fee is excluded;</li>
+<li>independent SaaS and endpoint backup;</li>
+<li>Azure resource consumption if the required subscription is used for services beyond governance and billing;</li>
+<li>support and administration;</li>
+<li>Windows 11 hardware replacement where current PCs fail eligibility; and</li>
+<li>optional mobility or BYOD controls;</li>
+<li>optional workflow automation, Copilot/agent usage, and Azure monitoring or management services.</li>
+</ul>
+<h2>11. Comparison with the other proposed solutions</h2>
+<p>The comparison is against the updated requirements, where remote work and user/device portability are optional.</p>
+<table><thead><tr>
+<th>Criterion</th>
+<th>Entra ID + Intune</th>
+<th>Google Workspace + GCPW</th>
+<th>Azure Virtual Desktop</th>
+</tr></thead><tbody>
+<tr>
+<td>Windows endpoint management</td>
+<td>Strongest native fit</td>
+<td>Conditional; exact controls must be tested</td>
+<td>Strong for hosted sessions, but still requires terminal management</td>
+</tr>
+<tr>
+<td>Google Workspace alignment</td>
+<td>Good with SAML/provisioning integration</td>
+<td>Best native alignment</td>
+<td>Indirect and more complex</td>
+</tr>
+<tr>
+<td>Local Windows productivity</td>
+<td>Preserved</td>
+<td>Preserved</td>
+<td>Not the primary operating model</td>
+</tr>
+<tr>
+<td>AD retirement</td>
+<td>Valid after dependency removal</td>
+<td>Valid after dependency removal</td>
+<td>Valid, but legacy apps may require additional services</td>
+</tr>
+<tr>
+<td>Simplicity</td>
+<td>Moderate and controllable</td>
+<td>Lowest if requirements are basic</td>
+<td>Lowest; many additional components</td>
+</tr>
+<tr>
+<td>Recurring cost</td>
+<td>Moderate</td>
+<td>Potentially lowest</td>
+<td>Highest and consumption-sensitive</td>
+</tr>
+<tr>
+<td>Administration</td>
+<td>Intune/Entra policy administration</td>
+<td>Google plus possible supplemental tooling</td>
+<td>Images, hosts, profiles, scaling, monitoring, and session support</td>
+</tr>
+<tr>
+<td>Office Internet outage behavior</td>
+<td>Some local productivity can continue</td>
+<td>Some local productivity can continue</td>
+<td>Users may lose access to hosted desktops</td>
+</tr>
+<tr>
+<td>Optional remote work</td>
+<td>Supported if enabled</td>
+<td>Supported if enabled and controlled</td>
+<td>Strong capability, but not required by baseline</td>
+</tr>
+<tr>
+<td>Replacement-device recovery</td>
+<td>Strong with Intune and documented rebuild</td>
+<td>Conditional</td>
+<td>Strong for hosted profile, but infrastructure-dependent</td>
+</tr>
+<tr>
+<td>Suitability for this baseline</td>
+<td><strong>Preferred</strong></td>
+<td><strong>Conditional alternative</strong></td>
+<td><strong>Exception only</strong></td>
+</tr>
+</tbody></table>
+<h3>Why Solution 1 remains preferred</h3>
+<p>The requirements make centrally managed Windows security, encryption, patching, inventory, application deployment, and local-admin control mandatory. Intune maps most directly to those requirements without introducing a new desktop-hosting platform.</p>
+<h3>When Solution 2 may be selected</h3>
+<p>Select Google Workspace + GCPW only if discovery proves that:</p>
+<ul>
+<li>all required Windows controls are available in the current or approved Google edition;</li>
+<li>no application requires AD DS, LDAP, Kerberos, NTLM, or domain membership;</li>
+<li>supplemental endpoint-security, patching, privilege, or RMM tools are not needed or are affordable;</li>
+<li>the business accepts a workgroup-style Windows operating model;</li>
+<li>the lower cost and simpler Google-centered administration outweigh Intune’s stronger Windows controls.</li>
+</ul>
+<h3>When Solution 3 may be selected</h3>
+<p>Select AVD only if a documented requirement justifies it, such as:</p>
+<ul>
+<li>a legacy application that is difficult or unsafe to deploy locally;</li>
+<li>the same centrally managed desktop is required from multiple approved locations;</li>
+<li>local data must be minimized;</li>
+<li>physical PCs are intentionally reduced to access terminals;</li>
+<li>contractors or temporary users need controlled hosted desktops;</li>
+<li>centralized application/version control provides measurable value.</li>
+</ul>
+<p>Without one of those conditions, AVD adds cost and operational dependencies without satisfying a mandatory requirement.</p>
+<h2>12. Risks and mitigations</h2>
+<table><thead><tr>
+<th>Risk</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr></thead><tbody>
+<tr>
+<td>AD dependency discovered late</td>
+<td>AD cannot be retired on schedule</td>
+<td>Complete dependency inventory before pilot and maintain a decommissioning gate</td>
+</tr>
+<tr>
+<td>Old Windows 10 hardware cannot run supported Windows 11</td>
+<td>Security and support failure</td>
+<td>Test hardware now; replace, repurpose, or use only an approved temporary ESU plan</td>
+</tr>
+<tr>
+<td>Entra and Google accounts do not match</td>
+<td>Duplicate accounts or wrong file ownership</td>
+<td>Pilot SAML/provisioning with immutable matching and ownership checks</td>
+</tr>
+<tr>
+<td>Domain profile data is lost or duplicated</td>
+<td>User disruption or data loss</td>
+<td>Back up first; use a tested profile migration or clean rebuild method</td>
+</tr>
+<tr>
+<td>Intune policies are too complex</td>
+<td>High support workload and user complaints</td>
+<td>Use Pilot/Standard/Exception groups and a small policy baseline</td>
+</tr>
+<tr>
+<td>Duplicate Microsoft and Google licensing</td>
+<td>Unnecessary recurring cost</td>
+<td>Inventory entitlements; purchase only required services</td>
+</tr>
+<tr>
+<td>Google Drive is treated as backup</td>
+<td>Inability to recover deleted or corrupted data</td>
+<td>Use independent SaaS backup and perform restore tests</td>
+</tr>
+<tr>
+<td>Emergency accounts are unavailable</td>
+<td>Administrative lockout</td>
+<td>Secure two separate emergency accounts and test recovery</td>
+</tr>
+<tr>
+<td>Cloud identity or Internet outage</td>
+<td>Authentication or SaaS interruption</td>
+<td>Define outage behavior, retain local productivity where possible, and document support escalation</td>
+</tr>
+<tr>
+<td>Azure subscription is misconfigured or accumulates unapproved resource charges</td>
+<td>Unexpected cost or loss of administrative control</td>
+<td>Use company-owned billing, separate RBAC, budgets, alerts, policy controls, and monthly resource review</td>
+</tr>
+<tr>
+<td>Optional Azure VM becomes permanent or Internet-exposed</td>
+<td>Security exposure, unplanned cost, or scope expansion</td>
+<td>Use a private VM with Bastion/VPN, Entra/MFA/RBAC, budgets, shutdown automation, an expiry date, and a deletion checklist</td>
+</tr>
+<tr>
+<td>Azure Arc agent or extensions expand privilege or cost unexpectedly</td>
+<td>On-premises management or financial exposure</td>
+<td>Use host allowlists, least-privilege RBAC, extension policies, outbound-only connectivity, budgets, service-level approval, and agent offboarding</td>
+</tr>
+<tr>
+<td>Optional mobility expands scope silently</td>
+<td>Cost and security exposure</td>
+<td>Separate approval, cost line, owner, and acceptance test for mobility/BYOD</td>
+</tr>
+<tr>
+<td>Copilot or chatbot exposes overshared or inaccurate information</td>
+<td>Confidentiality risk, incorrect decisions, or loss of user trust</td>
+<td>Review Microsoft 365/SharePoint permissions, use curated sources, restrict publishing, label AI output as requiring human review, and define an owner and escalation path</td>
+</tr>
+<tr>
+<td>Power Automate workflow becomes business-critical without support ownership</td>
+<td>Silent process failure or duplicated actions</td>
+<td>Use standard connectors first, document triggers/owners/failure alerts, test idempotency, and review premium or gateway dependencies before production use</td>
+</tr>
+<tr>
+<td>Optional services create platform duplication</td>
+<td>Higher cost and fragmented support</td>
+<td>Choose a system of record, limit pilots to measurable use cases, and review licenses, Azure consumption, and usage monthly</td>
+</tr>
+</tbody></table>
+<h2>13. Acceptance criteria</h2>
+<p>The design is accepted only when:</p>
+<ul>
+<li>all production users can sign in to Entra-joined Windows 11 PCs with MFA;</li>
+<li>Microsoft 365 Business Premium with Teams is active and assigned to the approved users, providing the baseline Entra, Intune, Office, and endpoint-security capabilities;</li>
+<li>the approved Conditional Access policies are tested; any separately approved Entra ID Free + Intune Plan 1 alternative documents its reduced-control exceptions;</li>
+<li>the company-owned Azure subscription is associated with the production Entra tenant, has separate billing and RBAC ownership, and has budget, alert, policy, and activity-log controls tested;</li>
+<li>all retained PCs are inventoried, encrypted, patched, protected, and centrally managed;</li>
+<li>required Office, Google Workspace, communication, printing, scanning, and peripheral workflows pass user acceptance;</li>
+<li>BitLocker recovery keys are escrowed and the local-admin recovery process works;</li>
+<li>onboarding, offboarding, device replacement, emergency access, and support procedures are documented and tested;</li>
+<li>user and shared data are owned correctly, independently backed up, and sample-restored;</li>
+<li>all DNS, DHCP, file, print, certificate, VPN, RADIUS, LDAP, Kerberos, NTLM, script, scheduled-task, and service-account dependencies have documented replacements or are proven unused;</li>
+<li>the router/firewall provides the approved post-AD DNS/DHCP functions;</li>
+<li>no Internet-exposed RDP, SMB, LDAP, or administrative service is required;</li>
+<li>rollback and stabilization criteria are satisfied;</li>
+<li>the domain controller is demoted cleanly and the approved backup is retained;</li>
+<li>the recurring cost is within the approved budget and no unapproved duplicate platform remains;</li>
+<li>remote work or user/device portability is tested only if separately enabled; it is not a baseline acceptance condition.</li>
+</ul>
+<h2>14. Decisions required before implementation</h2>
+<ul>
+<li>Confirm Entra ID as the authoritative workforce identity for Solution 1.</li>
+<li>Create or reuse the company-owned Microsoft Entra tenant through the approved Microsoft cloud subscription; do not create a duplicate workforce tenant.</li>
+<li>Approve six Microsoft 365 Business Premium with Teams user licenses as the Solution 1 baseline; do not add standalone Intune Plan 1 or Entra ID P1 licenses.</li>
+<li>If the Entra ID Free + standalone Intune Plan 1 profile is considered, approve it as a reduced-control exception and document the missing Conditional Access/device-compliance gates.</li>
+<li>Create or associate one company-owned Azure subscription with the Entra tenant and approve its billing owner, RBAC model, resource scope, budget ceiling, and cost-alert thresholds.</li>
+<li>Decide whether the optional Azure VM jumpbox or temporary remote server is needed; approve its purpose, private access path, owner, expiry date, budget, and removal criteria.</li>
+<li>Decide which retained on-premises hosts, if any, may be Azure Arc-enabled; approve agent connectivity, allowed extensions, management/security services, owner, budget, and offboarding criteria.</li>
+<li>Decide whether Google Workspace or Microsoft 365 will be authoritative for each category of business content before enabling work-grounded Copilot or building a knowledge agent.</li>
+<li>Prioritize any optional value-adds: Autopilot, SharePoint/Teams hub, standard workflows, MAM, Copilot Chat, paid Copilot pilot, Copilot Studio agent, or Azure monitoring.</li>
+<li>Approve the users, data sources, human-review rules, and success measures for any Copilot or chatbot pilot; do not treat AI output as an autonomous business decision.</li>
+<li>Confirm whether any workflow needs premium connectors, an on-premises gateway, RPA, AI Builder, or high-volume execution before relying on Microsoft 365 Power Automate rights.</li>
+<li>Confirm the existing Google Workspace edition and whether SAML/provisioning features are available.</li>
+<li>Confirm the exact Office licensing model; do not add Copilot or other unused services.</li>
+<li>Confirm whether Defender for Business or another endpoint-security product is required.</li>
+<li>Confirm the independent Google Workspace backup product and retention.</li>
+<li>Confirm Windows 11 compatibility for every PC and the replacement schedule for failed devices.</li>
+<li>Confirm which router/firewall will provide DHCP and DNS forwarding.</li>
+<li>Confirm every file, print, certificate, VPN, RADIUS, script, scheduled-task, and service-account dependency.</li>
+<li>Decide whether remote work is deferred, desired, or enabled for a defined group.</li>
+<li>Decide whether BYOD and secondary-device portability are deferred, controlled, or prohibited.</li>
+<li>Approve the monthly operating-cost ceiling and implementation effort range.</li>
+<li>Approve RTO, RPO, maintenance window, rollback window, and stabilization period.</li>
+</ul>
+<h2>15. References</h2>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join">Microsoft Entra joined devices</a></li>
+<li><a href="https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide">Microsoft Intune Windows enrollment guide</a></li>
+<li><a href="https://learn.microsoft.com/en-us/autopilot/registration-overview">Windows Autopilot registration overview</a></li>
+<li><a href="https://learn.microsoft.com/en-us/autopilot/existing-devices">Windows Autopilot for existing devices</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-chat-requirements">Microsoft 365 Copilot Chat requirements</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/microsoft-365-copilot-licensing">Microsoft Copilot licensing options</a></li>
+<li><a href="https://learn.microsoft.com/en-us/power-platform/admin/power-automate-licensing/types">Power Automate licensing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-copilot-studio/requirements-messages-management">Copilot Studio billing and consumption</a></li>
+<li><a href="https://learn.microsoft.com/en-us/defender-business/mdb-overview">Microsoft Defender for Business overview</a></li>
+<li><a href="https://learn.microsoft.com/en-us/sharepoint/document-library-version-history-limits">SharePoint and OneDrive version history</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/saas-apps/google-apps-tutorial">Microsoft Entra SSO for Google Workspace</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/saas-apps/g-suite-provisioning-tutorial">Microsoft Entra provisioning for Google Workspace</a></li>
+<li><a href="https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium">Microsoft 365 Business Premium pricing in Canada</a></li>
+<li><a href="https://www.microsoft.com/en-ca/security/business/microsoft-intune-pricing">Microsoft Intune plans and pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/intune/fundamentals/licensing">Microsoft Intune licensing</a></li>
+<li><a href="https://www.microsoft.com/en-ca/security/business/microsoft-entra-pricing">Microsoft Entra plans and pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/fundamentals/licensing">Microsoft Entra licensing</a></li>
+<li><a href="https://workspace.google.com/intl/en_ca/business/">Google Workspace pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/fundamentals/how-subscriptions-associated-directory">Azure subscription and Microsoft Entra tenant relationship</a></li>
+<li><a href="https://azure.microsoft.com/en-ca/pricing/calculator/">Azure Pricing Calculator</a></li>
+<li><a href="https://azure.microsoft.com/en-ca/pricing/details/virtual-machines/">Azure Virtual Machines pricing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/bastion/">Azure Bastion documentation</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/azure-arc/servers/overview">Azure Arc-enabled servers overview</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/azure-arc/servers/agent-overview">Azure Arc Connected Machine agent overview</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/update-manager/overview">Azure Update Manager overview</a></li>
+<li><a href="https://azure.microsoft.com/en-us/pricing/details/azure-arc/core-control-plane/">Azure Arc pricing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/well-architected/pillars">Azure Well-Architected Framework pillars</a></li>
+<li><a href="https://support.microsoft.com/en-us/windows/deployment/updates-lifecycle/windows-10-support-has-ended-on-october-14-2025">Windows 10 support lifecycle</a></li>
+</ul>
+
+    </div>
+  </article>
+</main>
+
+  <script src="../../site.js?v=639257110262405759" defer></script>
+</body>
+</html>

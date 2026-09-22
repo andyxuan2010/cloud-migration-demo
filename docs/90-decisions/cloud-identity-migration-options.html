@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- GENERATED_DOCUMENTATION_SITE -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture and requirements guidance for moving a small-business Windows environment from on-premises Active Directory to cloud-native identity, endpoint, and desktop services.">
+  <meta name="color-scheme" content="light dark">
+  <title>Cloud Identity and Desktop Modernization Options · Cloud Migration Demo</title>
+  <link rel="stylesheet" href="../../styles.css?v=639257110262405759">
+</head>
+<body data-index-path="../../index.html">
+  <header class="topbar">
+    <nav class="global-nav" aria-label="Primary">
+      <a href="https://andyxuan.ca/">Home</a>
+      <a href="https://andyxuan.ca/docs/">▤ Library</a>
+      <a href="https://github.com/andyxuan2010/cloud-migration-demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+    <a class="brand" href="../../index.html" aria-label="Documentation home">
+      <span class="brand-mark" aria-hidden="true">CM</span>
+      <span class="brand-text">Cloud Migration Demo <small>CCOE Azure documentation</small></span>
+    </a>
+    <div class="header-tools">
+      <div class="language-switch" aria-label="Language selection">
+        <span class="active" aria-current="true">EN</span>
+        <span aria-disabled="true">FR</span>
+        <span aria-disabled="true">中</span>
+      </div>
+      <button class="icon-button" id="themeButton" type="button" aria-label="Toggle dark mode" title="Toggle color theme">◐</button>
+    </div>
+  </header>
+
+  <main class="reader-view">
+  <div class="reader-navigation">
+    <a class="back-button" href="../../index.html">← All documents</a>
+    <span class="reader-path">docs/90-decisions/cloud-identity-migration-options.md</span>
+  </div>
+  <article class="reader">
+    <div class="reader-tools">
+      <span class="file-label">docs/90-decisions/cloud-identity-migration-options.md</span>
+      <a class="github-link" href="https://github.com/andyxuan2010/cloud-migration-demo/blob/main/docs/90-decisions/cloud-identity-migration-options.md" target="_blank" rel="noopener">View source on GitHub ↗</a>
+    </div>
+    <div class="markdown-body">
+    <p><strong>Document status:</strong> Draft v0.1 <strong>Prepared for:</strong> Small-office cloud migration <strong>Scope:</strong> 6 users, 10 office PCs, one existing on-premises Active Directory environment <strong>Date:</strong> 2026-09-04</p>
+<p><strong>Currency:</strong> CAD unless otherwise stated</p>
+<h2>1. Purpose</h2>
+<p>This document evaluates three options for retiring the existing on-premises Active Directory Domain Services (AD DS) server while retaining 10 physical office PCs and the current Google Workspace-centered application model.</p>
+<p>The evaluated options are:</p>
+<ol>
+<li>Microsoft Entra ID Join with Microsoft Intune</li>
+<li>Google Workspace, Google Credential Provider for Windows, and Windows device management</li>
+<li>Azure Virtual Desktop with centrally managed session hosts and the office PCs used as access terminals</li>
+</ol>
+<p>The document defines business and technical requirements, target architectures, migration activities, budgetary costs, implementation effort, constraints, risks, and a recommended direction.</p>
+<h2>2. Critical terminology</h2>
+<p>Microsoft Entra ID is a cloud identity and access-management service. It is <strong>not</strong> a cloud-hosted replacement for AD DS and does not provide traditional domain controllers, Group Policy, LDAP, Kerberos domain authentication, or NTLM in the same manner as AD DS.</p>
+<p>Therefore, the proposed project is not a literal migration of AD DS into Entra ID. It is a modernization project that:</p>
+<ul>
+<li>moves user identity and authentication to a cloud identity provider;</li>
+<li>replaces domain-joined Windows management with modern device management;</li>
+<li>migrates or eliminates workloads currently dependent on the domain controller; and</li>
+<li>retires AD DS only after every dependency has been addressed.</li>
+</ul>
+<p>Microsoft Entra Domain Services exists but is not included as a preferred option for this six-user environment. It preserves managed-domain capabilities for legacy applications, but adds cost and operational complexity and does not eliminate the domain model.</p>
+<h2>3. Current-state assumptions</h2>
+<p>This draft uses the following assumptions. They must be validated during discovery.</p>
+<table><thead><tr>
+<th>Area</th>
+<th>Assumption</th>
+</tr></thead><tbody>
+<tr>
+<td>Users and devices</td>
+<td>6 named users and 10 company-owned Windows PCs</td>
+</tr>
+<tr>
+<td>Operating system</td>
+<td>Windows 11 Pro, or hardware capable of running a supported Windows 11 Pro release</td>
+</tr>
+<tr>
+<td>Current identity</td>
+<td>One on-premises AD DS domain and one domain controller/server</td>
+</tr>
+<tr>
+<td>Primary collaboration platform</td>
+<td>Google Workspace, including Gmail, Google Drive, and Google Docs; retained or optional according to the selected solution</td>
+</tr>
+<tr>
+<td>Microsoft applications</td>
+<td>Locally installed Microsoft Office applications are required</td>
+</tr>
+<tr>
+<td>Other applications</td>
+<td>SaaS communication and business applications; no confirmed application requires LDAP, Kerberos, NTLM, or a Windows domain</td>
+</tr>
+<tr>
+<td>Local data</td>
+<td>User profiles and any server file shares can be migrated to approved cloud storage</td>
+</tr>
+<tr>
+<td>Office network</td>
+<td>Reliable business Internet, firewall/router, LAN, and Wi-Fi remain in place</td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>Normal small-business availability; no formal 24x7 high-availability requirement has yet been provided</td>
+</tr>
+<tr>
+<td>Compliance</td>
+<td>No regulated-data, legal-hold, or Canada-only data-residency requirement has yet been confirmed</td>
+</tr>
+<tr>
+<td>Support</td>
+<td>Remote administration is acceptable</td>
+</tr>
+</tbody></table>
+<h3>3.1 Common licensing and platform baseline</h3>
+<p>The updated architecture documents use the following comparable commercial baseline:</p>
+<ul>
+<li>Six <strong>Microsoft 365 Business Premium with Teams</strong> licenses are the common user-subscription baseline. The bundle includes Entra ID P1-level controls, Intune Plan 1, Office, Teams, Exchange Online, SharePoint, OneDrive, Defender for Business, Defender for Office 365 Plan 1, and Purview information-protection/DLP capabilities. Copilot, Entra ID P2, Intune Plan 2/Suite, and independent backup are separate.</li>
+<li>Solution 1 uses Entra ID as the authoritative identity and Intune as the Windows management plane. Solution 2 retains Google Workspace as authoritative and uses GCPW/Google Admin as the Windows control plane; Intune is included in the common license but is not layered onto GCPW-managed PCs. Solution 3 uses Entra ID for AVD access and hosted Windows sessions.</li>
+<li>Google Workspace is optional or retained according to the solution. Its license fee is <strong>optional and excluded from the comparable cost calculation</strong>; the required entitlement must still be verified before using Gmail, Drive, Docs, shared drives, or Google device management.</li>
+<li>Solution 1 and Solution 3 require a company-owned Microsoft Entra tenant and Azure subscription foundation. Solution 2 does not require Azure compute or an Azure subscription for GCPW, although an Azure subscription may be created as an optional governance boundary under the company standard.</li>
+<li>Entra ID Free plus standalone Intune Plan 1 is only a reduced-control exception for Solution 1. It lacks important controls such as custom Conditional Access and device-compliance gates, some self-service password-reset/enrollment paths, dynamic groups, and advanced risk/governance capabilities.</li>
+<li>Azure resource consumption, optional Azure services, hardware replacement, Internet service, optional dual-WAN/5G or UPS, major application work, incident response, and vendor support contracts are excluded unless separately estimated and approved.</li>
+</ul>
+<h2>4. Requirements</h2>
+<h3>4.1 Business requirements</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr></thead><tbody>
+<tr>
+<td>BR-01</td>
+<td>Retire the on-premises AD DS server without losing access to users, devices, applications, or business data.</td>
+<td>Mandatory</td>
+</tr>
+<tr>
+<td>BR-02</td>
+<td>Retain the 10 office PCs unless a device fails compatibility or security checks.</td>
+<td>Mandatory</td>
+</tr>
+<tr>
+<td>BR-03</td>
+<td>Preserve access to Gmail, Google Drive, Google Docs, Microsoft Office, and approved communication tools.</td>
+<td>Mandatory</td>
+</tr>
+<tr>
+<td>BR-04</td>
+<td>Support secure work from the office and, if approved, remote locations.</td>
+<td>Mandatory</td>
+</tr>
+<tr>
+<td>BR-05</td>
+<td>Minimize ongoing administration for an environment with no more than 6–10 users in the near term.</td>
+<td>Mandatory</td>
+</tr>
+<tr>
+<td>BR-06</td>
+<td>Provide a documented onboarding, offboarding, password-reset, device-replacement, and recovery process.</td>
+<td>Mandatory</td>
+</tr>
+<tr>
+<td>BR-07</td>
+<td>Complete migration with a tested rollback method and limited user downtime.</td>
+<td>Mandatory</td>
+</tr>
+<tr>
+<td>BR-08</td>
+<td>Keep licensing and cloud consumption predictable and proportionate to the organization size.</td>
+<td>Mandatory</td>
+</tr>
+</tbody></table>
+<h3>4.2 Identity and access requirements</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr></thead><tbody>
+<tr>
+<td>IAM-01</td>
+<td>One approved authoritative identity system must control the user lifecycle. Maintaining two unrelated authoritative directories is not acceptable.</td>
+</tr>
+<tr>
+<td>IAM-02</td>
+<td>Every user must have an individual account. Shared interactive accounts are prohibited except where a documented application requirement exists.</td>
+</tr>
+<tr>
+<td>IAM-03</td>
+<td>Phishing-resistant MFA should be used where supported; MFA is mandatory for all users and administrators.</td>
+</tr>
+<tr>
+<td>IAM-04</td>
+<td>At least two emergency administrator accounts must be created, secured separately, excluded only from policies that would prevent emergency access, and monitored.</td>
+</tr>
+<tr>
+<td>IAM-05</td>
+<td>Administrative accounts must be separate from routine user accounts.</td>
+</tr>
+<tr>
+<td>IAM-06</td>
+<td>Access must follow least privilege, with group-based assignment wherever practical.</td>
+</tr>
+<tr>
+<td>IAM-07</td>
+<td>Authentication and administrator audit logs must be retained for an agreed period.</td>
+</tr>
+<tr>
+<td>IAM-08</td>
+<td>SaaS applications should use SAML or OpenID Connect single sign-on where supported.</td>
+</tr>
+<tr>
+<td>IAM-09</td>
+<td>Onboarding and offboarding must add or revoke access across Windows, Google Workspace, Microsoft services, and other SaaS applications.</td>
+</tr>
+</tbody></table>
+<h3>4.3 Endpoint requirements</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr></thead><tbody>
+<tr>
+<td>END-01</td>
+<td>Each retained PC must run a supported edition and release of Windows 11. Windows Home is not acceptable for Microsoft Entra Join.</td>
+</tr>
+<tr>
+<td>END-02</td>
+<td>Full-disk encryption using BitLocker must be enabled, and recovery keys must be escrowed in an approved administrative system.</td>
+</tr>
+<tr>
+<td>END-03</td>
+<td>Antivirus/endpoint detection, host firewall, automatic patching, screen lock, and browser security policies must be centrally enforced.</td>
+</tr>
+<tr>
+<td>END-04</td>
+<td>Users must not receive permanent local-administrator rights. A controlled elevation or support procedure is required.</td>
+</tr>
+<tr>
+<td>END-05</td>
+<td>A managed local administrator account and password-rotation method are required.</td>
+</tr>
+<tr>
+<td>END-06</td>
+<td>The system must maintain device inventory, ownership, compliance, and last-contact information.</td>
+</tr>
+<tr>
+<td>END-07</td>
+<td>Lost, stolen, or retired devices must be blockable and, where supported, remotely wipeable.</td>
+</tr>
+<tr>
+<td>END-08</td>
+<td>Required applications must be packaged or documented for repeatable installation.</td>
+</tr>
+<tr>
+<td>END-09</td>
+<td>Existing user profiles, browser data, local files, printers, scanners, webcams, and other required peripherals must be tested before cutover.</td>
+</tr>
+</tbody></table>
+<h3>4.4 Application and data requirements</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr></thead><tbody>
+<tr>
+<td>APP-01</td>
+<td>Create a complete inventory of installed applications, versions, licensing, owners, data locations, and authentication dependencies.</td>
+</tr>
+<tr>
+<td>APP-02</td>
+<td>Confirm whether any application uses AD security groups, LDAP, Kerberos, NTLM, integrated Windows authentication, mapped drives, or domain service accounts.</td>
+</tr>
+<tr>
+<td>APP-03</td>
+<td>Confirm whether Microsoft Office licensing permits the selected physical or virtual-desktop deployment.</td>
+</tr>
+<tr>
+<td>APP-04</td>
+<td>Migrate user and shared data to an approved cloud repository with defined ownership and sharing controls.</td>
+</tr>
+<tr>
+<td>APP-05</td>
+<td>Google Drive for desktop behavior, offline access, shared drives, file ownership, and local cache capacity must be tested.</td>
+</tr>
+<tr>
+<td>APP-06</td>
+<td>Backup must be defined independently from synchronization. Google Drive, OneDrive, and an AVD profile container are not by themselves complete backup strategies.</td>
+</tr>
+<tr>
+<td>APP-07</td>
+<td>Define retention, deletion, legal-hold, and recovery-point objectives before migration.</td>
+</tr>
+</tbody></table>
+<h3>4.5 Network and infrastructure requirements</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr></thead><tbody>
+<tr>
+<td>NET-01</td>
+<td>Inventory every service currently hosted on the AD server, including AD-integrated DNS, DHCP, file shares, print services, certificate services, NPS/RADIUS, VPN authentication, scripts, scheduled tasks, and backup agents.</td>
+</tr>
+<tr>
+<td>NET-02</td>
+<td>Replace AD-integrated DNS with router/firewall DNS forwarding, a managed DNS service, or another documented design before retiring the domain controller.</td>
+</tr>
+<tr>
+<td>NET-03</td>
+<td>Move DHCP to the firewall/router or another supported platform if it is currently hosted on Windows Server.</td>
+</tr>
+<tr>
+<td>NET-04</td>
+<td>Provide stable Internet connectivity with sufficient bandwidth and latency. A secondary Internet connection is recommended if cloud access is business-critical.</td>
+</tr>
+<tr>
+<td>NET-05</td>
+<td>Maintain a business-grade firewall, current firmware, segmented guest Wi-Fi, and administrative access controls.</td>
+</tr>
+<tr>
+<td>NET-06</td>
+<td>Permit only documented outbound endpoints required by the selected cloud services. Inbound exposure of Windows hosts is prohibited.</td>
+</tr>
+<tr>
+<td>NET-07</td>
+<td>Remote support must use an approved secured tool; direct Internet exposure of RDP is prohibited.</td>
+</tr>
+</tbody></table>
+<h3>4.6 Operations, recovery, and acceptance requirements</h3>
+<table><thead><tr>
+<th>ID</th>
+<th>Requirement</th>
+</tr></thead><tbody>
+<tr>
+<td>OPS-01</td>
+<td>Export and protect current AD, DNS, DHCP, GPO, group, user, and computer configuration before migration.</td>
+</tr>
+<tr>
+<td>OPS-02</td>
+<td>Back up all server and endpoint data and perform at least one sample restore before cutover.</td>
+</tr>
+<tr>
+<td>OPS-03</td>
+<td>Pilot the selected solution with one user and one non-critical PC before broad migration.</td>
+</tr>
+<tr>
+<td>OPS-04</td>
+<td>Do not demote or remove the domain controller during the pilot. Preserve a documented rollback window.</td>
+</tr>
+<tr>
+<td>OPS-05</td>
+<td>Establish monitoring and alerts for identity risk, failed sign-ins, noncompliant devices, endpoint threats, backup failures, and AVD capacity where applicable.</td>
+</tr>
+<tr>
+<td>OPS-06</td>
+<td>Document the target environment, licenses, policies, application deployment, recovery procedures, and administrative ownership.</td>
+</tr>
+<tr>
+<td>OPS-07</td>
+<td>Obtain user acceptance for sign-in, Gmail, Drive, Docs, Office, printing, scanning, communication tools, and remote access before final decommissioning.</td>
+</tr>
+</tbody></table>
+<h3>4.7 Mandatory discovery checklist before design approval</h3>
+<p>The following must be answered. Without these answers, cost and effort remain budgetary rather than fixed:</p>
+<ul>
+<li>Which Windows Server roles are installed on the current server?</li>
+<li>Are DNS and DHCP running on Windows Server, the firewall, or another device?</li>
+<li>Are there file shares, mapped drives, printer queues, login scripts, or redirected folders?</li>
+<li>Which GPOs exist, and which settings must be recreated?</li>
+<li>Do any applications or appliances authenticate against AD, LDAP, RADIUS, Kerberos, or NTLM?</li>
+<li>Are there domain service accounts, scheduled tasks, Windows services, or scripts?</li>
+<li>Is Active Directory Certificate Services installed or are domain certificates auto-enrolled?</li>
+<li>How much local and shared data exists, and who owns it?</li>
+<li>What Google Workspace edition is currently licensed?</li>
+<li>What Microsoft 365 or Office licenses are already owned?</li>
+<li>Are all PCs running Windows 11 Pro and supported hardware?</li>
+<li>Which peripherals and locally installed applications are mandatory?</li>
+<li>Is remote work required, and from what types of endpoints?</li>
+<li>What recovery time objective (RTO) and recovery point objective (RPO) are required?</li>
+<li>Is Canadian data residency, privacy regulation, cyber-insurance control, or legal retention in scope?</li>
+</ul>
+<h2>5. Solution 1 — Microsoft Entra ID Join and Microsoft Intune</h2>
+<h3>5.1 Target architecture</h3>
+<pre><code class="language-mermaid">flowchart TD
+    U[&quot;6 users&quot;] --&gt; E[&quot;Microsoft Entra ID&quot;]
+    E --&gt; P[&quot;MFA and Conditional Access&quot;]
+    E --&gt; G[&quot;Google Workspace SSO&quot;]
+    P --&gt; D[&quot;10 Entra-joined PCs&quot;]
+    I[&quot;Microsoft Intune&quot;] --&gt; D
+    D --&gt; A[&quot;Office, Drive, SaaS apps&quot;]
+    AZ[&quot;Company Azure subscription&quot;] -. &quot;governance/billing&quot; .- E
+    O[&quot;Optional Azure VM / Arc&quot;] -. &quot;approved add-on&quot; .- AZ</code></pre>
+<p>Microsoft Entra ID becomes the authoritative workforce identity and Windows sign-in platform. Each PC is removed from the AD DS domain, joined directly to Entra ID, and enrolled in Intune. Intune replaces required GPO functions with configuration profiles, compliance policies, application deployment, update rings, security baselines, BitLocker management, and remote actions.</p>
+<p>Google Workspace remains the primary email and collaboration platform. Entra ID can provide SAML single sign-on and automated provisioning to Google Workspace, subject to detailed configuration and testing. The user objects must be matched carefully to avoid duplicate accounts or incorrect file ownership.</p>
+<p>See the detailed <a href="../images/entra_id_google_authentication_workflow.svg">Solution 1 user sign-in and authentication workflow</a>. The sequence is Entra Windows sign-in, MFA/Conditional Access, Intune compliance evaluation, local Windows session creation, and approved SAML/provisioning access to Google Workspace.</p>
+<h3>5.2 Required components</h3>
+<ul>
+<li>Company-owned Microsoft Entra tenant, verified company domain, and one associated Azure subscription for ownership, billing, RBAC, budgets, alerts, and governance</li>
+<li>Six Microsoft 365 Business Premium with Teams licenses as the baseline; this includes Entra ID P1-level controls and Intune Plan 1, so standalone Intune Plan 1 or Entra ID P1 licenses are not added</li>
+<li>Supported Windows 11 Pro devices</li>
+<li>Microsoft Intune configuration, compliance, application, and update policies</li>
+<li>MFA and Conditional Access</li>
+<li>Microsoft Defender for Business or another centrally managed endpoint-security platform</li>
+<li>Google Workspace SAML SSO and, if selected, automatic provisioning integration</li>
+<li>Cloud backup for Google Workspace and any other required business data; the Google Workspace license fee remains excluded from the comparable cost model</li>
+<li>Firewall/router-hosted DHCP and non-AD DNS design if currently provided by Windows Server</li>
+<li>Cached Entra sign-in tested for every assigned user/device after a successful initial online sign-in</li>
+</ul>
+<h3>5.3 Implementation sequence</h3>
+<ol>
+<li>Discover AD DS, server-role, application, data, GPO, network, and licensing dependencies.</li>
+<li>Back up the server and endpoints; export directory and policy configuration.</li>
+<li>Create or verify the company-owned Entra tenant, custom domain, administrators, MFA, Conditional Access, and emergency accounts.</li>
+<li>Create or associate one company-owned Azure subscription with the Entra tenant; confirm billing owner, subscription RBAC, budgets, alerts, policies, activity logging, and the prohibition on unapproved resource deployment.</li>
+<li>Configure Intune enrollment, device restrictions, compliance, BitLocker, Defender, Windows Update, local-admin controls, and application deployment.</li>
+<li>Configure Google Workspace SSO/provisioning in a test group without changing all production users.</li>
+<li>Build and validate one pilot PC, including user-profile and data migration.</li>
+<li>Have each assigned user complete an online Entra sign-in, then test lock/restart sign-in with the network disconnected; record which local applications and files remain usable.</li>
+<li>Migrate remaining PCs one at a time, keeping the domain controller available for rollback.</li>
+<li>Validate all acceptance tests and monitor for at least one agreed stabilization period.</li>
+<li>Move or eliminate remaining DNS, DHCP, file, print, certificate, authentication, and service-account dependencies.</li>
+<li>Demote and decommission the domain controller only after formal dependency and acceptance sign-off.</li>
+</ol>
+<h3>5.4 Advantages</h3>
+<ul>
+<li>Best direct fit for managing company-owned Windows PCs without AD DS.</li>
+<li>Strong Windows-native device configuration, compliance, encryption, update, application, and security controls.</li>
+<li>Physical PCs continue to work locally during a temporary Internet outage after cached sign-in, although cloud applications remain unavailable.</li>
+<li>Cached sign-in provides short-term local continuity only for users who have previously signed in online; it does not support first-time sign-in, new-device enrollment, password recovery, or live cloud authentication during the outage.</li>
+<li>Lower Azure infrastructure cost and complexity than AVD.</li>
+<li>Supports repeatable device deployment and replacement through Windows Autopilot for compatible procurement scenarios.</li>
+<li>Provides a credible path to a single authoritative identity across Windows and Google Workspace.</li>
+</ul>
+<h3>5.5 Reliability and single-point-of-failure review</h3>
+<p>Solution 1 removes the on-premises domain controller as an organization-wide dependency, but it does not automatically provide redundant office connectivity or eliminate managed-cloud service outages. The design must explicitly address the remaining failure paths:</p>
+<ul>
+<li>Entra ID and Intune are provider-managed control-plane dependencies. Protect against tenant lockout with two separately protected emergency accounts, independent recovery methods, documented escalation, and tested local-device outage behavior.</li>
+<li>Entra SAML for Google Workspace can become a shared authentication path. Pilot federation, retain a protected direct Google administrative recovery path, and test federation bypass or rollback before enforcing SSO broadly.</li>
+<li>The single ISP/router/firewall path shown in the logical design is a local single point of failure. Back up its configuration, protect the edge equipment with a UPS, and maintain a rapid-replacement plan. Keep dual-WAN or 5G/cellular failover optional; add it only when the approved RTO and business value justify the cost.</li>
+<li>A failed PC is a per-user failure. Keep business data in company-controlled cloud locations, maintain a repeatable Intune/Autopilot rebuild process, and test replacement-device recovery; provide a spare or loaner when the user RTO requires it.</li>
+<li>Google Workspace synchronization is not backup. Use independent backup with separate credentials, protected retention, documented exports, and periodic sample restores.</li>
+</ul>
+<p>The solution must not be described as fully highly available unless the applicable WAN, power, replacement-equipment, recovery, and failover tests are approved and completed.</p>
+<h3>5.6 Limitations and risks</h3>
+<ul>
+<li>GPOs cannot be copied blindly; required settings must be translated to Intune or replaced.</li>
+<li>Applications requiring LDAP, Kerberos, NTLM, domain computer accounts, or Windows integrated authentication need remediation or a separate legacy service.</li>
+<li>User profiles do not automatically convert from AD domain profiles to Entra profiles. Data and selected settings must be migrated with a tested method.</li>
+<li>Google Workspace and Microsoft cloud identities must be integrated deliberately; matching email addresses alone does not create lifecycle integration.</li>
+<li>Maintaining both Google Workspace and a Microsoft 365 bundle may create overlapping email, storage, and collaboration licenses.</li>
+</ul>
+<h3>5.7 Budgetary cost and effort</h3>
+<table><thead><tr>
+<th>Item</th>
+<th>Budgetary estimate</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Business Premium with Teams</td>
+<td><strong>CAD 29.80/user/month</strong> on annual commitment; 6 users = <strong>CAD 178.80/month</strong> before tax. This is the baseline bundle and already includes Entra ID P1-level controls and Intune Plan 1.</td>
+</tr>
+<tr>
+<td>Google Workspace</td>
+<td><strong>Optional; license fee excluded</strong> from this comparable model. Verify the required Google Workspace edition and entitlement before using Gmail, Drive, Docs, shared drives, or SAML/provisioning.</td>
+</tr>
+<tr>
+<td>Independent cloud backup</td>
+<td><strong>CAD 50–100/month</strong> planning allowance, depending on protected services, capacity, retention, and vendor.</td>
+</tr>
+<tr>
+<td>Azure subscription and consumption</td>
+<td><strong>CAD 0 fixed subscription fee</strong> in the baseline. The company-owned subscription is required as the governance/billing boundary; optional Azure resources such as logging, automation, or a VM require a separate estimate.</td>
+</tr>
+<tr>
+<td>Implementation effort</td>
+<td><strong>36–54 hours</strong> for a clean six-user/up-to-10-PC environment; <strong>52–72 hours</strong> when profile migration, legacy applications, complex GPO translation, Google account matching, Azure governance exceptions, or AD-hosted services require remediation.</td>
+</tr>
+<tr>
+<td>Indicative one-time services at CAD 125–150/hour</td>
+<td><strong>CAD 4,500–8,100</strong> for the baseline; <strong>CAD 6,500–10,800</strong> for the complex range.</td>
+</tr>
+</tbody></table>
+<p>The six-user baseline license/platform estimate is <strong>CAD 228.80–278.80/month</strong> (Business Premium with Teams plus backup), or <strong>CAD 2,745.60–3,345.60/year</strong>. The optional Google Workspace license is not included. Routine maintenance is approximately <strong>CAD 375–750/month</strong> (3–5 hours); if Azure resources or frequent application packaging and incident support are added, budget approximately <strong>CAD 625–1,200/month</strong>.</p>
+<h2>6. Solution 2 — Google Workspace with GCPW and Windows device management</h2>
+<h3>6.1 Target architecture</h3>
+<pre><code class="language-mermaid">flowchart TD
+    U[&quot;6 users&quot;] --&gt; G[&quot;Google Workspace identity&quot;]
+    G --&gt; M[&quot;MFA and access policies&quot;]
+    G --&gt; W[&quot;GCPW Windows sign-in&quot;]
+    X[&quot;Google Windows management&quot;] --&gt; D[&quot;10 workgroup PCs&quot;]
+    W --&gt; D
+    D --&gt; A[&quot;Gmail, Drive, Office, SaaS apps&quot;]
+    B[&quot;Microsoft 365 Business Premium baseline&quot;] -. &quot;Office/Defender/tenant boundary&quot; .- D
+    AZ[&quot;Optional Azure subscription&quot;] -. &quot;governance only&quot; .- B</code></pre>
+<p>Google Workspace becomes the authoritative identity. Google Credential Provider for Windows (GCPW) allows users to sign in to Windows using their organizational Google Account. Google&#39;s enhanced desktop security features provide Windows settings and device-management capabilities through the Google Admin console.</p>
+<p>The PCs are not joined to a traditional Windows domain. This is a cloud-first, workgroup-style design with Google identity integration. It is viable only when the organization has simple endpoint requirements and no remaining dependency on AD DS protocols or domain features.</p>
+<p>See the detailed <a href="../images/google_gcpw_authentication_workflow.svg">Solution 2 user sign-in and authentication workflow</a>. The sequence is GCPW sign-in, Google Workspace authentication and 2-Step Verification/policy evaluation, Windows profile creation, optional Google Windows-management enrollment, and access to Google services. Google Workspace remains authoritative; Microsoft Entra ID is not the Solution 2 identity control plane.</p>
+<h3>6.2 Required components</h3>
+<ul>
+<li>Google Workspace edition that includes the required advanced endpoint and Windows-management features; the Google entitlement is required when this solution is selected, but its license fee is excluded from the comparable cost model</li>
+<li>Six Microsoft 365 Business Premium with Teams licenses as the common Microsoft portfolio baseline for Office, Defender for Business, and the Microsoft tenant/licensing boundary, unless an approved reduced-cost exception is documented</li>
+<li>GCPW deployed and configured on every PC</li>
+<li>Supported Windows edition and Google Chrome</li>
+<li>Google Workspace MFA, administrator protections, context-aware/access policies as licensed, and audit logging</li>
+<li>Defined method for Windows configuration, patching, BitLocker recovery-key custody, local-administrator control, software distribution, and endpoint detection</li>
+<li>Intune is included in the common Business Premium license but is not used as a competing Windows MDM for GCPW-managed PCs</li>
+<li>Separate backup for Google Workspace data</li>
+<li>Firewall/router-hosted DHCP and non-AD DNS design if currently provided by Windows Server</li>
+</ul>
+<h3>6.3 Implementation sequence</h3>
+<ol>
+<li>Discover AD DS, server-role, application, data, GPO, network, and licensing dependencies.</li>
+<li>Confirm that Google Workspace is the authoritative directory and select the required edition; confirm the six-user Microsoft 365 Business Premium with Teams baseline or document the reduced-cost exception and its missing controls.</li>
+<li>Confirm the company-owned Microsoft tenant, verified domain, billing owner, and recovery contacts. If an Azure subscription is required by company standard, associate it with the tenant and configure ownership, RBAC, budgets, alerts, policies, and activity logging without introducing Azure resources by default.</li>
+<li>Harden Workspace administrator accounts, MFA, organizational units, groups, access controls, and audit settings.</li>
+<li>Design Windows settings, patching, encryption, endpoint protection, application deployment, and local-admin procedures.</li>
+<li>Install and configure GCPW and Google Windows management on one pilot PC.</li>
+<li>Test how the existing AD profile will be linked or migrated; do not assume the old profile will be adopted automatically.</li>
+<li>Validate Drive for desktop, Office, printing, scanning, browsers, and all business applications.</li>
+<li>Deploy the configuration to the remaining PCs and complete user acceptance.</li>
+<li>Move or eliminate remaining server dependencies.</li>
+<li>Decommission AD DS only after the environment operates without domain services for the agreed stabilization period.</li>
+</ol>
+<h3>6.4 Advantages</h3>
+<ul>
+<li>Aligns identity with the organization&#39;s existing Gmail, Drive, and Docs platform.</li>
+<li>Avoids introducing Microsoft as a second primary user directory if Windows-management requirements are modest.</li>
+<li>GCPW provides Google-account-based Windows sign-in and Google service SSO.</li>
+<li>Potentially lower incremental licensing if the organization already owns the required Google Workspace edition.</li>
+<li>Simple conceptual model for a small organization that uses almost entirely web and SaaS applications.</li>
+</ul>
+<h3>6.5 Limitations and risks</h3>
+<ul>
+<li>This is not a functional replacement for a Windows domain. It does not reproduce AD DS computer accounts, Group Policy breadth, LDAP, Kerberos domain services, NTLM domain authentication, or Windows-integrated access to legacy resources.</li>
+<li>Google&#39;s Windows-management controls are narrower than Intune. Exact requirements for application packaging, endpoint detection and response, privileged access, BitLocker recovery, configuration reporting, and remediation must be tested rather than assumed.</li>
+<li>If a separate RMM/UEM, endpoint-security, patching, or privilege-management product is needed, the apparent simplicity and cost advantage decreases.</li>
+<li>GCPW creates or associates a Windows user experience, but profile migration must be piloted. Incorrect profile handling can strand local application settings and data.</li>
+<li>Locally installed Microsoft Office still requires valid Microsoft licensing and its update channel must be managed.</li>
+<li>This option should be rejected if discovery identifies any non-remediable domain-dependent application or security control.</li>
+</ul>
+<h3>6.6 Budgetary cost and effort</h3>
+<table><thead><tr>
+<th>Item</th>
+<th>Budgetary estimate</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Business Premium with Teams</td>
+<td><strong>CAD 29.80/user/month</strong> on annual commitment; 6 users = <strong>CAD 178.80/month</strong> before tax. This is the common Microsoft baseline for Office, Defender for Business, and the Microsoft tenant/licensing boundary. Intune Plan 1 is included but is not the GCPW Windows control plane.</td>
+</tr>
+<tr>
+<td>Google Workspace</td>
+<td><strong>Optional; license fee excluded</strong> from this comparable model. The required Google Workspace entitlement and edition must still be verified for GCPW, Gmail, Drive, Docs, shared drives, and Google Windows management.</td>
+</tr>
+<tr>
+<td>Supplemental endpoint/RMM tooling</td>
+<td>Excluded pending the control-gap pilot; estimate separately if Google-native controls do not meet the requirements.</td>
+</tr>
+<tr>
+<td>Independent cloud backup</td>
+<td><strong>CAD 50–100/month</strong> planning allowance, depending on protected services, capacity, retention, and vendor.</td>
+</tr>
+<tr>
+<td>Azure subscription and consumption</td>
+<td><strong>CAD 0 fixed subscription fee</strong> if the optional governance boundary is created without Azure resources. Azure VM, Arc, Monitor, networking, or other services require a separate estimate.</td>
+</tr>
+<tr>
+<td>Implementation effort</td>
+<td><strong>30–46 hours</strong> for a clean six-user/up-to-10-PC environment; <strong>42–62 hours</strong> when profile migration, custom settings, MSI packaging, application remediation, or supplemental endpoint controls are required.</td>
+</tr>
+<tr>
+<td>Indicative one-time services at CAD 125–150/hour</td>
+<td><strong>CAD 3,750–6,900</strong> for the baseline; the complex range is approximately <strong>CAD 5,250–9,300</strong>.</td>
+</tr>
+</tbody></table>
+<p>The six-user comparable baseline is <strong>CAD 228.80–278.80/month</strong> (Microsoft 365 Business Premium with Teams plus backup). This excludes the Google Workspace license fee and supplemental endpoint/RMM tooling, even though the Google entitlement remains required if Solution 2 is selected. Routine maintenance is approximately <strong>CAD 375–900/month</strong> (3–6 hours).</p>
+<h2>7. Solution 3 — Azure Virtual Desktop with office PCs as terminals</h2>
+<h3>7.1 Target architecture</h3>
+<pre><code class="language-mermaid">flowchart TD
+    T[&quot;Office PCs or thin clients&quot;] --&gt; A[&quot;Azure Virtual Desktop service&quot;]
+    E[&quot;Microsoft Entra ID and MFA&quot;] --&gt; A
+    A --&gt; H[&quot;Pooled Windows 11 session hosts&quot;]
+    H --&gt; F[&quot;FSLogix profiles on Azure Files&quot;]
+    H --&gt; S[&quot;Office, browser, Drive and SaaS apps&quot;]
+    I[&quot;Intune, image and monitoring&quot;] --&gt; H
+    B[&quot;Microsoft 365 Business Premium with Teams&quot;] -. &quot;user baseline&quot; .- E
+    AZ[&quot;Company Azure subscription&quot;] --&gt; A</code></pre>
+<p>Users connect from the office PCs to a centrally managed Azure Virtual Desktop (AVD) environment. Applications are installed in a standard Windows 11 Enterprise multi-session image. User profiles are stored in FSLogix profile containers, normally on Azure Files. The local office PCs act primarily as secured access devices.</p>
+<p>For six office users, the baseline is a pooled host pool rather than six dedicated virtual machines. One correctly sized session host may support normal office work, but it is a single point of failure. A production design should allow a second host for maintenance and recovery, with autoscale controlling runtime where appropriate.</p>
+<p>See the detailed <a href="../images/avd_entra_authentication_workflow.svg">Solution 3 user sign-in and authentication workflow</a>. The sequence is access-terminal sign-in, Entra MFA/Conditional Access and license-token evaluation, AVD workspace/broker authorization, session-host connection, and FSLogix profile/application attachment. Google Workspace is accessed in the hosted session when retained.</p>
+<h3>7.2 Required components</h3>
+<ul>
+<li>Company-owned Microsoft Entra tenant and Azure subscription, billing controls, resource groups, RBAC, budgets, alerts, policies, activity logging, and region selection</li>
+<li>Six Microsoft 365 Business Premium with Teams licenses as the baseline AVD user subscription; this includes Entra ID P1-level controls, Intune Plan 1, Office, Teams, and Defender for Business. Confirm AVD and shared-computer eligibility before production.</li>
+<li>AVD workspace, host pool, application group, session hosts, and scaling plan</li>
+<li>Supported Windows 11 Enterprise multi-session image and repeatable image-maintenance process</li>
+<li>Intune or another supported configuration-management approach for session hosts</li>
+<li>Azure Files and FSLogix profile containers, permissions, monitoring, backup, and recovery design</li>
+<li>Network security controls and, only if private resources require it, VNet integration, private endpoints, DNS, firewall, or VPN</li>
+<li>Remote Desktop client or supported browser access on each terminal</li>
+<li>Sufficient Internet bandwidth, low latency, and preferably a backup Internet connection</li>
+<li>Peripheral redirection validation for printers, scanners, webcams, microphones, USB devices, and multiple monitors</li>
+<li>Google Workspace is optional/retained according to the approved design; its license fee is excluded from the comparable cost model. Google Drive for desktop compatibility and cache/profile behavior must be tested in multi-session Windows.</li>
+</ul>
+<h3>7.3 Initial sizing assumption</h3>
+<p>The following is a starting point, not an approved production size:</p>
+<ul>
+<li>Pooled host pool for 6 named users</li>
+<li>Windows 11 Enterprise multi-session</li>
+<li>1 general-purpose 8-vCPU/32-GB session host during normal operation</li>
+<li>Capacity for a second host during maintenance, incidents, or high load</li>
+<li>Approximately 30–50 GB of profile capacity per user initially, adjusted after measurement</li>
+<li>Autoscale schedule aligned with business hours</li>
+<li>Standardized application image and monthly patch/release cycle</li>
+<li>No GPU workload and no heavy CAD, engineering, video-editing, or compute-intensive application</li>
+</ul>
+<p>Sizing must be tested with actual browser tabs, Google Drive behavior, Office files, videoconferencing, printing, and concurrent-user workload. A paper estimate is insufficient.</p>
+<h3>7.4 Implementation sequence</h3>
+<ol>
+<li>Complete the same AD DS and application discovery required by the other options.</li>
+<li>Create or associate the company-owned Azure subscription with the production Entra tenant; establish security, budgets, naming, region, logging, policy, and administrative roles.</li>
+<li>Prepare Entra ID, MFA, Conditional Access, emergency accounts, groups, and six Microsoft 365 Business Premium with Teams user licenses.</li>
+<li>Build the AVD network, workspace, pooled host pool, application group, and autoscale plan.</li>
+<li>Create a hardened standard image with Office, browsers, Google components, communication tools, security agents, and required line-of-business applications.</li>
+<li>Configure Azure Files, FSLogix, permissions, profile exclusions, backup, and restore tests.</li>
+<li>Pilot with one or two users and measure sign-in time, CPU, memory, storage IOPS, application performance, videoconferencing, and peripheral redirection.</li>
+<li>Adjust host size, session density, scaling, image, and profile settings using pilot evidence.</li>
+<li>Configure and harden the 10 endpoint/terminal devices and deploy the Remote Desktop client.</li>
+<li>Migrate users in stages, stabilize, eliminate server dependencies, and then retire AD DS.</li>
+</ol>
+<h3>7.5 Advantages</h3>
+<ul>
+<li>Centralized application installation, patching, security, and desktop configuration.</li>
+<li>User data and application execution remain in Azure rather than on each office terminal, subject to redirection and download policies.</li>
+<li>Existing PCs can have extended useful life if they can securely run the AVD client and supported local operating system.</li>
+<li>A standard image reduces configuration drift across user desktops.</li>
+<li>Supports controlled remote access without exposing RDP directly to the Internet.</li>
+<li>Pooled multi-session desktops can be more economical than 10 dedicated Cloud PCs when concurrency and schedules are well managed.</li>
+</ul>
+<h3>7.6 Limitations and risks</h3>
+<ul>
+<li>Highest architecture and operational complexity of the three options.</li>
+<li>AVD is not automatically cheap. Compute, storage, backup, monitoring, network services, image maintenance, and support all add cost.</li>
+<li>Business productivity depends on Internet and Azure availability. A local Internet outage can stop all desktop work.</li>
+<li>One host is a single point of failure; two always-on hosts improve availability but increase cost.</li>
+<li>Poorly configured FSLogix storage causes slow sign-ins, profile corruption, or failed sessions.</li>
+<li>Google Drive for desktop and other per-user applications require explicit multi-session compatibility testing.</li>
+<li>Audio/video meetings, printers, scanners, USB devices, multiple monitors, and other redirected peripherals can produce a worse experience than local execution.</li>
+<li>An AVD environment still needs active management: image updates, application releases, capacity, profiles, monitoring, security, and incident response.</li>
+<li>AVD does not eliminate identity design. Session hosts still require a supported identity and join model, and legacy application dependencies remain relevant.</li>
+</ul>
+<h3>7.7 Budgetary cost and effort</h3>
+<table><thead><tr>
+<th>Item</th>
+<th>Budgetary estimate</th>
+</tr></thead><tbody>
+<tr>
+<td>Microsoft 365 Business Premium with Teams</td>
+<td><strong>CAD 29.80/user/month</strong> on annual commitment; 6 users = <strong>CAD 178.80/month</strong> before tax. This is the baseline AVD user subscription and includes Entra ID P1-level controls, Intune Plan 1, Office, Teams, and Defender for Business.</td>
+</tr>
+<tr>
+<td>Azure AVD infrastructure and services</td>
+<td>Validate with the Azure Pricing Calculator and a measured pilot. A one-host pilot is approximately <strong>CAD 508–978/month gross</strong>; two right-sized hosts for better availability are approximately <strong>CAD 808–1,678/month gross</strong>, including the license-only baseline, backup, and estimated Azure consumption.</td>
+</tr>
+<tr>
+<td>Google Workspace</td>
+<td><strong>Optional/retained; license fee excluded</strong> from the comparable calculation. Verify the required entitlement if Gmail, Drive, Docs, shared drives, or related workflows remain in the hosted desktop.</td>
+</tr>
+<tr>
+<td>Implementation effort</td>
+<td><strong>58–104 hours</strong> for the basic deployment scope; a low-concurrency pilot may fit within <strong>48–72 hours</strong>. Application complexity, private networking, high availability, or formal disaster recovery increases effort.</td>
+</tr>
+<tr>
+<td>Indicative one-time services at CAD 125–150/hour</td>
+<td><strong>CAD 7,250–15,600</strong> for the basic scope; <strong>CAD 6,000–10,800</strong> for a 48–72 hour pilot.</td>
+</tr>
+</tbody></table>
+<p>The license-only baseline is <strong>CAD 228.80–278.80/month</strong> (Business Premium with Teams plus backup), but it is already included in the gross AVD operating ranges above and must not be added twice. Routine maintenance is approximately <strong>CAD 750–1,800/month</strong> (6–12 hours); a one-host pilot may require approximately <strong>CAD 500–1,200/month</strong>.</p>
+<h2>8. Comparative assessment</h2>
+<p>The comparison uses the updated requirements, where remote work and user/device portability are optional. A mandatory requirement overrides a general fit assessment. For example, if a critical application requires domain Kerberos and cannot be modernized, neither Solution 1 nor Solution 2 can be approved as written.</p>
+<table><thead><tr>
+<th>Criterion</th>
+<th>Solution 1: Entra ID + Intune</th>
+<th>Solution 2: Google + GCPW</th>
+<th>Solution 3: AVD</th>
+</tr></thead><tbody>
+<tr>
+<td>Authoritative identity</td>
+<td>Entra ID</td>
+<td>Google Workspace</td>
+<td>Entra ID, with hosted desktops</td>
+</tr>
+<tr>
+<td>Windows sign-in</td>
+<td>Native Entra join</td>
+<td>GCPW Google-account sign-in</td>
+<td>Hosted-session sign-in</td>
+</tr>
+<tr>
+<td>Windows endpoint depth</td>
+<td>Strongest native Windows control</td>
+<td>Conditional; feature coverage must be tested</td>
+<td>Strong for session hosts; terminals also need management</td>
+</tr>
+<tr>
+<td>Google Workspace alignment</td>
+<td>Good through SAML/provisioning</td>
+<td>Best native alignment</td>
+<td>Indirect and more complex</td>
+</tr>
+<tr>
+<td>Local Windows productivity</td>
+<td>Preserved</td>
+<td>Preserved</td>
+<td>Not the primary model</td>
+</tr>
+<tr>
+<td>Application deployment</td>
+<td>Broad Intune packaging and policy model</td>
+<td>MSI/custom-setting model; validate non-MSI apps</td>
+<td>Centralized image/app model</td>
+</tr>
+<tr>
+<td>Privilege, EDR, recovery</td>
+<td>More complete when licensed</td>
+<td>May require supplemental products</td>
+<td>Requires host, profile, and terminal controls</td>
+</tr>
+<tr>
+<td>MDM compatibility</td>
+<td>Native Microsoft stack</td>
+<td>GCPW conflicts with third-party MDM/UEM</td>
+<td>Separate AVD/endpoint management stack</td>
+</tr>
+<tr>
+<td>Simplicity</td>
+<td>Moderate</td>
+<td>Lowest if requirements are basic</td>
+<td>Lowest</td>
+</tr>
+<tr>
+<td>Recurring cost</td>
+<td>Moderate</td>
+<td>Potentially lowest when Google and supplemental controls are already funded</td>
+<td>Highest and consumption-sensitive</td>
+</tr>
+<tr>
+<td>Office Internet outage</td>
+<td>Some local productivity can continue</td>
+<td>Some local productivity can continue after sign-in</td>
+<td>Hosted work may be unavailable</td>
+</tr>
+<tr>
+<td>Optional remote work</td>
+<td>Supported if enabled</td>
+<td>Supported if enabled and controlled</td>
+<td>Strong capability but not baseline-required</td>
+</tr>
+<tr>
+<td>Suitability for this baseline</td>
+<td><strong>Preferred for Windows control</strong></td>
+<td><strong>Conditional low-cost alternative</strong></td>
+<td><strong>Exception only</strong></td>
+</tr>
+</tbody></table>
+<h2>9. Cost summary</h2>
+<h3>9.1 Standard six-user cost model</h3>
+<p>The following comparable model assumes six users and up to 10 PCs, normal SaaS and Office workloads, annual commitments where available, Canadian dollars before tax, and no major hardware replacement. “Deployment” is one-time professional services. “Operational” is recurring licensing, cloud, backup, and—only for Solution 3—estimated AVD consumption. “Maintenance” is routine administration at <strong>CAD 125–150/hour</strong> and excludes incidents, major projects, hardware replacement, and vendor support contracts.</p>
+<table><thead><tr>
+<th>Solution</th>
+<th>Implementation effort and cost</th>
+<th>Recurring baseline/platform cost</th>
+<th>Routine maintenance</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Solution 1: Entra ID + Intune</strong></td>
+<td><strong>36–54 hours</strong>, approximately 6–10 weeks; <strong>CAD 4,500–8,100</strong></td>
+<td><strong>CAD 228.80–278.80/month</strong> for six Business Premium with Teams licenses plus independent backup. Google Workspace is optional and excluded; Azure consumption is excluded.</td>
+<td><strong>CAD 375–750/month</strong>; approximately <strong>CAD 625–1,200/month</strong> if Azure resources or frequent packaging/incident support are added.</td>
+</tr>
+<tr>
+<td><strong>Solution 2: Google Workspace + GCPW</strong></td>
+<td><strong>30–46 hours</strong>, approximately 5–9 weeks; <strong>CAD 3,750–6,900</strong>. A complex profile/control-gap scope may reach 42–62 hours.</td>
+<td><strong>CAD 228.80–278.80/month</strong> for the common Microsoft Business Premium with Teams baseline plus backup. Google Workspace and supplemental endpoint/RMM fees are excluded, although the Google entitlement remains required.</td>
+<td><strong>CAD 375–900/month</strong> (approximately 3–6 hours).</td>
+</tr>
+<tr>
+<td><strong>Solution 3: Azure Virtual Desktop</strong></td>
+<td><strong>58–104 hours</strong>, approximately 10–16 weeks; <strong>CAD 7,250–15,600</strong>. A low-concurrency pilot may be <strong>48–72 hours / CAD 6,000–10,800</strong>.</td>
+<td><strong>CAD 808–1,678/month gross</strong> for two right-sized hosts, licenses, backup, and estimated Azure consumption. A one-host pilot is approximately <strong>CAD 508–978/month</strong> and remains a single point of failure. Google Workspace fees are excluded.</td>
+<td><strong>CAD 750–1,800/month</strong> (approximately 6–12 hours); one-host pilot approximately <strong>CAD 500–1,200/month</strong>.</td>
+</tr>
+</tbody></table>
+<p>These are planning estimates, not quotations. The Solution 3 gross range already includes the license-only baseline and must not be added to it a second time. All totals exclude tax, reseller margin, hardware replacement, Internet service, optional dual-WAN/5G or UPS, formal compliance work, large data migration, complex application remediation, optional value-add services, incident response, and ongoing managed support. Recalculate Azure consumption for the selected region, workload schedule, storage tier, network design, and availability target.</p>
+<h3>9.2 Optional value-adds and Azure add-ons</h3>
+<p>The following are deliberately excluded from the baseline implementation and recurring-cost ranges. Each requires an owner, measurable outcome, implementation estimate, cost ceiling, data boundary, and rollback or retirement criterion:</p>
+<table><thead><tr>
+<th>Optional capability</th>
+<th>Small-business value</th>
+<th>Planning treatment</th>
+</tr></thead><tbody>
+<tr>
+<td>Windows Autopilot</td>
+<td>Faster replacement and reprovisioning of compatible PCs</td>
+<td>Solution 1 baseline add-on; optional for AVD access terminals. Allow approximately 4–8 hours. Do not layer onto GCPW-managed PCs without a control-plane redesign.</td>
+</tr>
+<tr>
+<td>SharePoint/Teams operating hub</td>
+<td>Central procedures, templates, onboarding, and Microsoft-owned content</td>
+<td>Uses baseline Microsoft 365 services where appropriate; allow approximately 6–12 hours. Avoid duplicating Google repositories without a content-ownership decision.</td>
+</tr>
+<tr>
+<td>Standard Power Automate workflows</td>
+<td>Lightweight approvals, onboarding/offboarding, reminders, and support exceptions</td>
+<td>Allow approximately 2–4 hours per simple workflow. Premium connectors, gateways, RPA, AI Builder, and high-volume use require a separate license review.</td>
+</tr>
+<tr>
+<td>Microsoft 365 Copilot Chat or paid Copilot pilot</td>
+<td>Employee research, drafting, summarization, or work-grounded assistance</td>
+<td>Copilot Chat enablement may be available to eligible Business Premium users; paid Copilot is a separate per-user add-on and should start with a one- or two-user pilot.</td>
+</tr>
+<tr>
+<td>Copilot Studio internal FAQ agent</td>
+<td>Self-service IT, HR, or procedure guidance</td>
+<td>Separate agent licensing/usage review; allow approximately 8–16 hours plus content-owner and maintenance time.</td>
+</tr>
+<tr>
+<td>Intune mobile application management</td>
+<td>Controlled mobile/BYOD access</td>
+<td>Optional Intune capability; allow approximately 4–8 hours for policy, privacy, Conditional Access, and revocation testing.</td>
+</tr>
+<tr>
+<td>Azure VM jumpbox or temporary remote server</td>
+<td>Controlled administrative or migration access</td>
+<td>Optional/add-on only; use private access, Entra MFA/RBAC, budgets, automatic shutdown, and expiry. Allow approximately 6–12 hours plus Azure consumption.</td>
+</tr>
+<tr>
+<td>Azure Arc for retained on-premises hosts</td>
+<td>Central inventory, management, and patch visibility</td>
+<td>Optional/add-on only for approved retained hosts; price Arc, Update Manager, Monitor, Defender, and extensions separately.</td>
+</tr>
+</tbody></table>
+<h3>9.3 Azure Well-Architected validation</h3>
+<p>All three detailed architecture documents map the designs to the five Azure Well-Architected pillars. The control depth depends on the Azure footprint: Solution 3 requires the most Azure-specific validation, Solution 1 requires subscription governance for the company-owned foundation, and Solution 2 uses Azure only if its optional governance boundary is approved.</p>
+<table><thead><tr>
+<th>Pillar</th>
+<th>Required cross-solution evidence</th>
+</tr></thead><tbody>
+<tr>
+<td>Reliability</td>
+<td>Emergency access, outage behavior, backup/restore, rollback, recovery testing, and explicit AVD host-availability decisions.</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>MFA, Conditional Access where licensed, least privilege, encryption, endpoint protection, recovery-key custody, and no inbound RDP.</td>
+</tr>
+<tr>
+<td>Cost Optimization</td>
+<td>Business Premium baseline, optional Google licensing treatment, backup allowances, budgets/alerts, resource tagging, AVD autoscale, and right-sizing.</td>
+</tr>
+<tr>
+<td>Operational Excellence</td>
+<td>Pilot rings, repeatable policy/image build steps, monitoring, incident/change records, support runbooks, and handover evidence.</td>
+</tr>
+<tr>
+<td>Performance Efficiency</td>
+<td>Device/application compatibility tests, profile validation, AVD concurrency measurement, host sizing, and controlled scaling.</td>
+</tr>
+</tbody></table>
+<h2>10. Recommendation</h2>
+<h3>10.1 Preferred solution</h3>
+<p>Proceed with <strong>Solution 1: Microsoft Entra ID Join and Microsoft Intune</strong>, using six Microsoft 365 Business Premium with Teams licenses as the baseline, creating or associating one company-owned Azure subscription with the Entra tenant, and retaining Google Workspace for Gmail, Drive, and Docs with Entra SSO/provisioning where approved. Exclude the Google Workspace license fee from the comparison model, but verify that the required Google entitlement remains available.</p>
+<p>This solution is the strongest fit because the problem includes Windows workstation identity, security, configuration, patching, encryption, and application management—not merely access to Google applications. Intune has the most complete native control plane for those Windows requirements without introducing persistent virtual-desktop infrastructure.</p>
+<h3>10.2 Conditional alternatives</h3>
+<p>Choose <strong>Solution 2</strong> only if discovery proves all of the following:</p>
+<ul>
+<li>the PCs require only basic Windows configuration and software management;</li>
+<li>no application or appliance depends on AD DS protocols or domain membership;</li>
+<li>Google Workspace provides every required endpoint control, or identified gaps are accepted and funded through another product; and</li>
+<li>the organization accepts a workgroup-style Windows architecture;</li>
+<li>the GCPW/Google Windows-management pilot passes sign-in, encryption, patching, endpoint-security, application, inventory, recovery, and device-retirement acceptance; and</li>
+<li>the common Microsoft 365 Business Premium baseline is either approved or its reduced-cost exception documents how Office, security, and missing controls will be covered.</li>
+</ul>
+<p>Choose <strong>Solution 3</strong> only if centralized desktops provide a documented business benefit that justifies the extra cost and operational burden, such as:</p>
+<ul>
+<li>users need the same managed desktop from office and remote locations;</li>
+<li>local endpoint data must be minimized;</li>
+<li>application deployment and version consistency are materially difficult on physical PCs; or</li>
+<li>aging PCs need to function as access terminals while applications run centrally;</li>
+<li>the company-owned Azure subscription, AVD licensing, concurrency, profile storage, backup, and availability budget are approved; and</li>
+<li>the Entra authentication, AVD brokering, image, FSLogix, peripheral, and recovery pilots pass acceptance.</li>
+</ul>
+<p>For only six users with ordinary SaaS and Office workloads, AVD is technically valid but usually excessive unless one of those benefits is mandatory.</p>
+<h2>11. Proposed next steps</h2>
+<ol>
+<li>Run a 4–8 hour discovery workshop and technical assessment using the checklist in Section 4.7.</li>
+<li>Produce an application and server-dependency register with an owner and disposition for every item.</li>
+<li>Confirm existing Google, Microsoft, Windows, Office, endpoint-security, backup, and Internet-service entitlements; approve six Microsoft 365 Business Premium with Teams licenses as the common baseline or document the exception.</li>
+<li>Approve the authoritative identity platform and target security baseline. For Solutions 1 and 3, create or associate the company-owned Entra tenant and Azure subscription; for Solution 2, decide whether the optional Azure governance boundary is needed.</li>
+<li>Obtain reseller quotations and calculate Azure pricing using the actual region, measured schedule, storage, network, and availability requirements.</li>
+<li>Validate the appropriate sign-in workflow diagram and recovery path: Entra/Intune and Google federation for Solution 1, GCPW/Google Admin for Solution 2, or Entra/AVD brokering for Solution 3.</li>
+<li>Build a one-user/one-device pilot without altering the production domain controller.</li>
+<li>Update this document with pilot results, confirmed pricing, final RTO/RPO, cutover steps, rollback criteria, optional add-on decisions, and the decommissioning checklist.</li>
+</ol>
+<h2>12. Completed end state and deliverables</h2>
+<p>After the approved plan is carried out, the handover package should include:</p>
+<ul>
+<li>A company-owned identity foundation and, where required, Azure subscription with verified domain, ownership, billing, RBAC, budgets, alerts, policies, activity logging, and recovery contacts.</li>
+<li>User and administrator accounts, MFA, emergency access, group assignments, onboarding/offboarding, and the selected sign-in/recovery workflow tested and documented.</li>
+<li>All retained PCs or AVD access terminals inventoried, supported, encrypted, patched, protected, and managed by the approved control plane.</li>
+<li>Approved Office, Google Workspace, browser, communication, printing, scanning, and line-of-business workflows tested through user acceptance.</li>
+<li>User and shared data migrated with ownership, retention, backup, restore evidence, RPO/RTO, and vendor-exit procedures documented.</li>
+<li>AD DS dependencies replaced or formally accepted, with DNS/DHCP and other network/service responsibilities documented after domain-controller retirement.</li>
+<li>Final architecture diagrams, policy/configuration register, migration ledger, operating runbooks, support contacts, cost/license register, rollback evidence, and business acceptance sign-off.</li>
+<li>Evidence for every approved optional add-on, including its owner, controls, cost, operating procedure, and expiry/retirement decision.</li>
+</ul>
+<h2>13. Acceptance criteria</h2>
+<p>The project is complete only when:</p>
+<ul>
+<li>all six users can sign in with the approved cloud identity and MFA;</li>
+<li>six Microsoft 365 Business Premium with Teams licenses are assigned as the approved common baseline, or a documented exception identifies replacement Office, identity, security, and missing-control coverage;</li>
+<li>for Solutions 1 and 3, the company-owned Entra tenant and Azure subscription are associated and their ownership, billing, RBAC, budgets, alerts, policies, and activity logging are tested; for Solution 2, any optional Azure subscription has the same governance evidence;</li>
+<li>the selected authentication workflow passes online sign-in, MFA/2-Step Verification, recovery, offline or outage behavior where applicable, and offboarding tests;</li>
+<li>all 10 PCs or terminal devices are inventoried, encrypted, patched, protected, and centrally managed;</li>
+<li>Gmail, Google Drive, Google Docs, Microsoft Office, communication tools, printing, scanning, and required peripherals pass user acceptance testing;</li>
+<li>user and shared data have been migrated, protected, and sample-restored;</li>
+<li>onboarding, offboarding, support, device replacement, and emergency access have been tested and documented;</li>
+<li>DNS, DHCP, file, print, LDAP, Kerberos, NTLM, RADIUS, VPN, certificate, service-account, script, and scheduled-task dependencies have documented replacements or have been proven unused;</li>
+<li>rollback criteria and the stabilization period have been satisfied;</li>
+<li>the domain controller has been demoted cleanly and its backups retained according to the approved retention plan; and</li>
+<li>final architecture, configuration, licensing, operating procedures, and recovery documentation have been handed over.</li>
+</ul>
+<h2>14. References</h2>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/devices/device-join-plan">Microsoft: Plan a Microsoft Entra join deployment</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join">Microsoft: What is a Microsoft Entra joined device?</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/devices/faq">Microsoft: Microsoft Entra device management FAQ</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-primary-refresh-token">Microsoft: Troubleshoot primary refresh token issues</a></li>
+<li><a href="https://learn.microsoft.com/en-us/intune/device-enrollment/windows/guide">Microsoft: Windows device enrollment guide for Intune</a></li>
+<li><a href="https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-plans-and-pricing">Microsoft: Microsoft 365 business plans and pricing in Canada</a></li>
+<li><a href="https://www.microsoft.com/en-ca/microsoft-365/business/microsoft-365-business-premium">Microsoft: Microsoft 365 Business Premium pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/saas-apps/google-apps-tutorial">Microsoft: Google Cloud / G Suite Connector SSO with Entra ID</a></li>
+<li><a href="https://learn.microsoft.com/en-us/entra/identity/saas-apps/g-suite-provisioning-tutorial">Microsoft: Google Workspace automatic provisioning with Entra ID</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/overview-enhanced-desktop-security-for-windows">Google: Enhanced desktop security for Windows overview</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/install-google-credential-provider-for-windows">Google: Install Google Credential Provider for Windows</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/devices/enable-windows-device-management">Google: Enable Windows device management</a></li>
+<li><a href="https://knowledge.workspace.google.com/admin/getting-started/editions/business-editions">Google: Google Workspace business editions</a></li>
+<li><a href="https://workspace.google.com/intl/en_ca/business/">Google: Google Workspace pricing in Canada</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/licensing">Microsoft: Azure Virtual Desktop licensing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/understand-estimate-costs">Microsoft: Understand and estimate Azure Virtual Desktop costs</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/prerequisites">Microsoft: Azure Virtual Desktop prerequisites</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/fslogix-profile-containers">Microsoft: FSLogix profile containers for Azure Virtual Desktop</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/virtual-desktop/autoscale-create-assign-scaling-plan">Microsoft: Azure Virtual Desktop autoscale scaling plans</a></li>
+<li><a href="https://azure.microsoft.com/en-ca/pricing/calculator/">Azure Pricing Calculator</a></li>
+</ul>
+
+    </div>
+  </article>
+</main>
+
+  <script src="../../site.js?v=639257110262405759" defer></script>
+</body>
+</html>

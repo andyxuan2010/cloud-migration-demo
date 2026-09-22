@@ -331,9 +331,26 @@ if (-not (Test-Path -LiteralPath $templatePath)) { throw "Site template not foun
 if (-not (Test-Path -LiteralPath $configPath)) { throw "Site configuration not found: $configPath" }
 
 $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
-$generatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $documents = @(Get-ChildItem -LiteralPath $docsRoot -Recurse -File -Filter "*.md" | Sort-Object FullName)
 if ($documents.Count -eq 0) { throw "No Markdown documents found under $docsRoot" }
+
+$sourceFiles = @(
+    $documents
+    Get-ChildItem -LiteralPath $siteRoot -Recurse -File | Sort-Object FullName
+)
+$sourceFingerprintInput = ($sourceFiles | ForEach-Object {
+    $relativePath = [System.IO.Path]::GetRelativePath($repoRoot, $_.FullName).Replace('\', '/')
+    $fileHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+    "$relativePath`:$fileHash"
+}) -join "`n"
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $sourceFingerprint = [BitConverter]::ToString(
+        $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($sourceFingerprintInput))
+    ).Replace('-', '').ToLowerInvariant()
+} finally {
+    $sha256.Dispose()
+}
 
 if (Test-Path -LiteralPath $outputRoot) {
     Remove-Item -LiteralPath $outputRoot -Recurse -Force
@@ -374,8 +391,7 @@ $siteTitle = Encode-Html ([string]$config.title)
 $siteDescription = Encode-Html ([string]$config.description)
 $eyebrow = Encode-Html ([string]$config.eyebrow)
 $repositoryUrl = Encode-Html ([string]$config.repository)
-$generatedText = Encode-Html $generatedAt
-$assetVersion = [DateTime]::UtcNow.Ticks.ToString()
+$assetVersion = $sourceFingerprint.Substring(0, 12)
 
 function Render-Page {
     param(
@@ -389,7 +405,6 @@ function Render-Page {
     $page = $page.Replace('{{PAGE_TITLE}}', (Encode-Html $PageTitle))
     $page = $page.Replace('{{SITE_TITLE}}', $siteTitle)
     $page = $page.Replace('{{EYEBROW}}', $eyebrow)
-    $page = $page.Replace('{{GENERATED_AT}}', $generatedText)
     $page = $page.Replace('{{GITHUB_URL}}', $repositoryUrl)
     $page = $page.Replace('{{ASSET_VERSION}}', $assetVersion)
     $page = $page.Replace('{{ROOT_PREFIX}}', $prefix)
